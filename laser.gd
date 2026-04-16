@@ -20,6 +20,9 @@ func _ready():
 	self.scale = Vector2(1.0, 1.0)
 	z_as_relative = false
 	
+	if GameState.current_mode == GameState.GameMode.ONLINE:
+		_setup_multiplayer_sync()
+	
 	# Layer 4 (Laser), Mask 2 & 4 (Asteroid & Player)
 	collision_layer = 8 
 	collision_mask = 2 | 4 
@@ -43,6 +46,18 @@ func get_energy_color() -> Color:
 	return col.lerp(Color.WHITE, 0.10) # Always maintain 10% pure white for brightness
 
 func _physics_process(delta):
+	if GameState.current_mode == GameState.GameMode.ONLINE and not is_multiplayer_authority():
+		self.position = pos
+		# Update trail for remote visual smoothness
+		trail_pos.append(pos)
+		trail_time.append(Time.get_ticks_msec() / 1000.0)
+		var current_time = Time.get_ticks_msec() / 1000.0
+		while trail_time.size() > 0 and current_time - trail_time[0] > TRAIL_LIFETIME:
+			trail_pos.pop_front()
+			trail_time.pop_front()
+		queue_redraw()
+		return
+
 	# 1. Gravity Deflection
 	var eps = PhysicsConfig.LASER_GRAVITY_EPS
 	var g_l = gravity.sample_g_tt(pos + Vector2(-eps, 0))
@@ -128,5 +143,22 @@ func _draw():
 
 		# Draw the laser head (Isometric billboarding to remain circular)
 		draw_set_transform(offset, -0.785398, Vector2(1.0, 2.0))
-		draw_circle(Vector2.ZERO, 4, Color.WHITE)
+		draw_line(Vector2(-4, 0), Vector2(4, 0), Color.WHITE, 2.0)
+		draw_line(Vector2(0, -4), Vector2(0, 4), Color.WHITE, 2.0)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+func _setup_multiplayer_sync():
+	var synchronizer = MultiplayerSynchronizer.new()
+	var config = SceneReplicationConfig.new()
+	
+	config.add_property(^"pos")
+	config.add_property(^"p")
+	
+	synchronizer.replication_config = config
+	synchronizer.root_path = get_path()
+	add_child(synchronizer)
+	
+	# Lasers are short-lived, so we sync their position and direction.
+	# To follow "Host is Boss", Peer 1 owns all lasers.
+	synchronizer.set_multiplayer_authority(1)
+	set_multiplayer_authority(1)

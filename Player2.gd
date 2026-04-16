@@ -54,26 +54,49 @@ func _ready():
 	# Thruster
 	var p_emit = CPUParticles2D.new()
 	p_emit.name = "ThrusterParticles"
-	p_emit.amount = 80
+	p_emit.amount = 24
 	p_emit.lifetime = 0.5
 	p_emit.spread = 20.0
 	p_emit.gravity = Vector2.ZERO
 	p_emit.initial_velocity_min = 80.0
-	p_emit.scale_amount_min = 2.0
-	p_emit.scale_amount_max = 2.0
+	p_emit.scale_amount_min = 4.0
+	p_emit.scale_amount_max = 4.0
 	
 	var g = Gradient.new()
 	g.interpolation_mode = Gradient.GRADIENT_INTERPOLATE_CONSTANT
 	g.add_point(0.0, Color(1, 1, 1, 1))   # White
 	g.add_point(0.1, Color(1, 1, 0, 1))   # Yellow
-	g.add_point(0.4, Color(1, 0.5, 0, 1)) # Orange
-	g.add_point(0.8, Color(1, 0, 0, 0))   # Fade out
+	g.add_point(0.25, Color(1, 0.5, 0, 1)) # Orange
+	g.add_point(0.4, Color(1, 0, 0, 1))   # Red
+	g.add_point(0.8, Color(1, 0, 0, 0.33)) # 33% Opacity Red
 	p_emit.color_ramp = g
 	
 	p_emit.emitting = false
 	p_emit.direction = Vector2(-1, 0)
 	p_emit.position = (Vector2(1, 2) - ship_center) * 4.0
 	add_child(p_emit)
+
+	if GameState.current_mode == GameState.GameMode.ONLINE:
+		_setup_multiplayer_sync()
+
+func _setup_multiplayer_sync():
+	var synchronizer = MultiplayerSynchronizer.new()
+	var config = SceneReplicationConfig.new()
+	
+	# Properties to sync
+	config.add_property(^"pos")
+	config.add_property(^"p")
+	config.add_property(^"orientation")
+	config.add_property(^"ai_thrust")
+	config.add_property(^"ai_rot_dir")
+	config.add_property(^"ai_fire")
+	
+	synchronizer.replication_config = config
+	synchronizer.root_path = get_path()
+	add_child(synchronizer)
+	
+	# Important: Only the authority sets the properties, others receive them.
+	synchronizer.set_multiplayer_authority(get_multiplayer_authority())
 
 func _physics_process(delta):
 	if is_exploding: return
@@ -96,7 +119,14 @@ func _physics_process(delta):
 		rot_dir = float(Input.is_physical_key_pressed(KEY_RIGHT)) - float(Input.is_physical_key_pressed(KEY_LEFT))
 		thrusting = Input.is_physical_key_pressed(KEY_UP)
 		firing = Input.is_physical_key_pressed(KEY_DOWN)
+		
+		# In online mode, we also update the ai_* variables so they get synced to the remote peer
+		if GameState.current_mode == GameState.GameMode.ONLINE:
+			ai_rot_dir = rot_dir
+			ai_thrust = thrusting
+			ai_fire = firing
 	else:
+		# If this is a remote player in online mode, we use the synced values
 		rot_dir = ai_rot_dir
 		thrusting = ai_thrust
 		firing = ai_fire
@@ -113,8 +143,9 @@ func _physics_process(delta):
 	if spawn_timer > 0: spawn_timer -= delta_proper
 	if laser_cooldown > 0: laser_cooldown -= delta_proper
 	if firing and laser_cooldown <= 0 and spawn_timer <= 0:
-		p -= orientation * p_laser # Recoil
-		var l = laser_scene.instantiate()
+		if GameState.current_mode != GameState.GameMode.ONLINE or multiplayer.is_server():
+			p -= orientation * p_laser # Recoil
+			var l = laser_scene.instantiate()
 		l.pos = pos + orientation * 20
 		l.p = orientation
 		l.energy = p_laser * l.C_SPEED

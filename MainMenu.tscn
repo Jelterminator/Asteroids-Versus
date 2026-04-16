@@ -55,6 +55,11 @@ custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 text = "AI CHALLENGE"
 
+[node name="BtnScreensaver" type="Button" parent="VBoxContainer"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+text = "SCREENSAVER"
+
 [node name="DifficultyMenu" type="VBoxContainer" parent="."]
 visible = false
 layout_mode = 1

@@ -34,11 +34,14 @@ func _ready():
 	if GameState.current_mode == GameState.GameMode.AI:
 		call_deferred("_setup_ai")
 
-	elif GameState.current_mode == GameState.GameMode.ONLINE:
-		# Prepare for multiplayer synchronizer setup in Phase 2
-		pass
+	elif GameState.current_mode == GameState.GameMode.SCREENSAVER:
+		call_deferred("_setup_screensaver")
 
-	spawn_initial_asteroids()
+	elif GameState.current_mode == GameState.GameMode.ONLINE:
+		call_deferred("_setup_online")
+
+	if GameState.current_mode != GameState.GameMode.ONLINE or multiplayer.is_server():
+		spawn_initial_asteroids()
 
 func _setup_ai():
 	print("Main: Initializing AI Challenge...")
@@ -59,6 +62,82 @@ func _setup_ai():
 	if p2:
 		p2.set_meta("is_ai", true)
 		print("Main: Player 2 assigned AI control (", ai.brain_name, ")")
+
+func _setup_screensaver():
+	print("Main: Initializing Screensaver Mode (", GameState.p1_brain_name, " vs ", GameState.p2_brain_name, ")...")
+	var ai_controller_script = load("res://AIController.gd")
+	
+	# P1 AI
+	var ai1 = Node2D.new()
+	ai1.set_script(ai_controller_script)
+	ai1.name = "AIController1"
+	ai1.target_player_name = "Player"
+	ai1.brain_name = GameState.p1_brain_name
+	add_child(ai1)
+	
+	# P2 AI
+	var ai2 = Node2D.new()
+	ai2.set_script(ai_controller_script)
+	ai2.name = "AIController2"
+	ai2.target_player_name = "Player2"
+	ai2.brain_name = GameState.p2_brain_name
+	add_child(ai2)
+	
+	# Mark ships as AI
+	var p1 = massives_container.get_node_or_null("Player")
+	var p2 = massives_container.get_node_or_null("Player2")
+	if p1: p1.set_meta("is_ai", true)
+	if p2: p2.set_meta("is_ai", true)
+
+func _setup_online():
+	print("Main: Initializing Online Mode...")
+	var p1 = massives_container.get_node_or_null("Player")
+	var p2 = massives_container.get_node_or_null("Player2")
+	
+	if p1 and p2:
+		# Peer 1 (Host) owns Player 1, Peer 2 (Client) owns Player 2
+		p1.set_multiplayer_authority(1)
+		p2.set_multiplayer_authority(2)
+		
+		# Set is_local based on authority
+		p1.is_local = (multiplayer.get_unique_id() == 1)
+		p2.is_local = (multiplayer.get_unique_id() == 2)
+		
+		print("Main: Multiplayer authority assigned. Local ID: ", multiplayer.get_unique_id())
+		_show_role_indicator()
+
+	# Set up MultiplayerSpawner to sync dynamic objects (asteroids, lasers)
+	var spawner = MultiplayerSpawner.new()
+	spawner.spawn_path = massives_container.get_path()
+	# Add the scenes that can be spawned
+	spawner.add_spawnable_scene("res://asteroid.tscn")
+	spawner.add_spawnable_scene("res://laser.tscn")
+	add_child(spawner)
+
+func _show_role_indicator():
+	var canvas = CanvasLayer.new()
+	canvas.layer = 100
+	add_child(canvas)
+	
+	var label = Label.new()
+	var my_id = multiplayer.get_unique_id()
+	label.text = "YOU ARE PLAYER " + str(my_id)
+	
+	# Color based on player
+	var p_color = Color(0, 0.5, 1) if my_id == 1 else Color(1, 0.2, 0)
+	label.add_theme_color_override("font_color", p_color)
+	label.add_theme_font_size_override("font_size", 48)
+	
+	label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	canvas.add_child(label)
+	
+	# Fade out animation using Tween
+	var tween = get_tree().create_tween()
+	# Wait 0.4s then fade over 0.6s to reach 1.0s total
+	tween.tween_interval(0.4)
+	tween.tween_property(label, "modulate:a", 0.0, 0.6)
+	tween.finished.connect(canvas.queue_free)
 
 func spawn_initial_asteroids():
 	var num_asteroids = randi_range(5, 15)
@@ -150,6 +229,8 @@ func _on_restart_pressed():
 	get_tree().paused = false
 	# Check for match completion
 	if GameState.p1_wins >= GameState.WINS_TO_WIN_MATCH or GameState.p2_wins >= GameState.WINS_TO_WIN_MATCH:
+		if GameState.current_mode == GameState.GameMode.SCREENSAVER:
+			GameState.randomize_screensaver_brains()
 		GameState.reset_match_state()
 	else:
 		GameState.reset_win_state() # Just reset current round winner

@@ -24,7 +24,27 @@ func _ready():
 	collision_layer = 2
 	collision_mask = 2 # Merge only with asteroids
 	
+	if GameState.current_mode == GameState.GameMode.ONLINE:
+		_setup_multiplayer_sync()
+	
 	generate_shape()
+
+func _setup_multiplayer_sync():
+	var synchronizer = MultiplayerSynchronizer.new()
+	var config = SceneReplicationConfig.new()
+	
+	# Properties to sync from Host to Client
+	config.add_property(^"pos")
+	config.add_property(^"p")
+	config.add_property(^"m")
+	
+	synchronizer.replication_config = config
+	synchronizer.root_path = get_path()
+	add_child(synchronizer)
+	
+	# Asteroids are ALWAYS owned by the host (Peer 1)
+	synchronizer.set_multiplayer_authority(1)
+	set_multiplayer_authority(1)
 
 func generate_shape():
 	polygon_points = PackedVector2Array()
@@ -45,6 +65,14 @@ func generate_shape():
 
 func _physics_process(delta):
 	if is_exploding: return
+	
+	# Only the authority (Host) processes physics for asteroids
+	if GameState.current_mode == GameState.GameMode.ONLINE and not is_multiplayer_authority():
+		# On client, we still need to update position from the synced 'pos'
+		self.position = pos
+		# We might also need to regenerate the shape if mass changed
+		return
+
 	if invinciframe > 0: invinciframe -= 1
 	
 	var p_mc = p.length() / (m * PhysicsConfig.C)
@@ -167,6 +195,10 @@ func hit_by_laser(laser_energy, shooter = null):
 	var parent_node = get_parent()
 	if not parent_node: return
 	
+	# Only the authority (Host) handles destruction and splintering
+	if GameState.current_mode == GameState.GameMode.ONLINE and not is_multiplayer_authority():
+		return
+		
 	spawn_explosion()
 	is_exploding = true
 	
