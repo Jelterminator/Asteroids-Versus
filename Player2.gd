@@ -76,6 +76,8 @@ func _ready():
 	add_child(p_emit)
 
 func _physics_process(delta):
+	if is_exploding: return
+	
 	var p_mc = p.length() / (m * PhysicsConfig.C)
 	var gamma = sqrt(1.0 + p_mc * p_mc)
 	
@@ -243,6 +245,7 @@ func hit_by_laser(_energy, _shooter = null):
 	is_exploding = true
 	GameState.notify_death(p_name)
 	spawn_explosion()
+	visible = false
 	
 	if not has_meta("is_ai") and GameState.current_mode != GameState.GameMode.AI:
 		queue_free()

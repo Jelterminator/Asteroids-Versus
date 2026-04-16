@@ -143,22 +143,21 @@ func get_gravity_harmonics(gravity_manager) -> Array:
 	if gravity_basis.is_empty(): _init_gravity_basis()
 	
 	var harmonics = []
-	var grid = gravity_manager.grid
-	var steps = [0, 4, 8, 12] # 4x4 sample points
+	var grid = gravity_manager.g_tt_grid
+	var steps = [0, 2, 4, 6, 8, 10, 12, 14] # 8x8 sample points
 	
 	for basis in gravity_basis:
 		var real_sum: float = 0.0
 		var imag_sum: float = 0.0
 		var s_idx = 0
 		
-		# Sample the 4x4 grid
+		# Sample the 8x8 grid (64 points total)
 		for sy in steps:
 			var y_off = sy * 16
 			for sx in steps:
-				var val = grid[y_off + sx]
-				var g_tt: float = val if val is float else val.g_tt
+				var g_tt = grid[y_off + sx]
 				
-				# Dot product with pre-calculated basis
+				# Dot product with pre-calculated 8x8 basis
 				real_sum += g_tt * basis[0][s_idx]
 				imag_sum += g_tt * basis[1][s_idx]
 				s_idx += 1
@@ -170,12 +169,12 @@ func get_gravity_harmonics(gravity_manager) -> Array:
 
 func _init_gravity_basis():
 	gravity_basis.clear()
-	# Reduced to top 6 frequency pairs (12 vars total)
+	# Standardized 8x8 grid discretization
 	var frequencies = [
 		Vector2(1, 0), Vector2(0, 1), Vector2(1, 1), 
 		Vector2(2, 0), Vector2(0, 2), Vector2(2, 1)
 	]
-	var steps = [0, 4, 8, 12]
+	var steps = [0, 2, 4, 6, 8, 10, 12, 14]
 	const INV_N_TAU = -TAU / 16.0
 	
 	for uv in frequencies:
@@ -193,17 +192,17 @@ func _init_gravity_basis():
 # ==========================================
 func get_action_space() -> Dictionary:
 	return {
-		"thrust": {"size": 1, "space": "box"},
-		"rot_left": {"size": 1, "space": "box"},
-		"rot_right": {"size": 1, "space": "box"},
-		"fire": {"size": 1, "space": "box"}
+		"thrust": {"size": 1, "action_type": "continuous"},
+		"rot_left": {"size": 1, "action_type": "continuous"},
+		"rot_right": {"size": 1, "action_type": "continuous"},
+		"fire": {"size": 1, "action_type": "continuous"}
 	}
 
 func set_action(action: Dictionary):
-	if ship and is_instance_valid(ship):
-		ship.ai_thrust = action["thrust"] > 0.0
-		ship.ai_rot_dir = (1.0 if action["rot_right"] > 0.0 else 0.0) - (1.0 if action["rot_left"] > 0.0 else 0.0)
-		ship.ai_fire = action["fire"] > 0.0
+	if not ship or not is_instance_valid(ship) or get_done(): return
+	ship.ai_thrust = action["thrust"][0] > 0.0
+	ship.ai_rot_dir = (1.0 if action["rot_right"][0] > 0.0 else 0.0) - (1.0 if action["rot_left"][0] > 0.0 else 0.0)
+	ship.ai_fire = action["fire"][0] > 0.0
 
 func get_reward() -> float:
 	if not reward_manager: return 0.0
@@ -217,7 +216,12 @@ func get_done() -> bool:
 	return ship.is_exploding or GameState.winner != ""
 
 func reset():
-	var main = get_node_or_null("/root/Main") # Make sure this matches your scene root name!
+	super.reset()
+	# Only the master agent triggers the global asteroid/laser cleanup
+	var is_master = (name == "AIController1" or name == "AIController")
+	print("RL-AGENT: Reset for ", name, " | Master: ", is_master)
+	
+	var main = get_tree().current_scene
 	if main and main.has_method("reset_match"):
 		var is_match_over = (GameState.p1_wins >= GameState.WINS_TO_WIN_MATCH or GameState.p2_wins >= GameState.WINS_TO_WIN_MATCH)
-		main.reset_match(is_match_over)
+		main.reset_match(is_match_over, is_master)

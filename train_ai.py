@@ -153,15 +153,30 @@ if __name__ == "__main__":
     os.makedirs("models", exist_ok=True)
     os.makedirs("training", exist_ok=True)
     
+    print("\n--- ENVIRONMENT SETUP ---")
+    is_headless = input("Run in headless mode? [Y/n]: ").lower() != 'n'
+    
     GODOT_PATH = r"C:\Users\jelte\Godot\Godot_v4.6.2-stable_win64_console.exe"
-    env_params = {
-        "env_path": GODOT_PATH,
-        "show_window": False,
-        "scene_path": "training/training_scene.tscn",
-        "speedup": 80.0,
-        "n_parallel": 5 
-    }
+    
+    if is_headless:
+        print(">>> Headless mode enabled (High-speed training)")
+        env_params = {
+            "env_path": GODOT_PATH,
+            "show_window": False,
+            "scene_path": "training/training_scene.tscn",
+            "speedup": 80.0,
+            "n_parallel": 5 
+        }
+    else:
+        print(">>> Visual mode enabled (Observation mode)")
+        env_params = {
+            "env_path": GODOT_PATH,
+            "show_window": True,
+            "scene_path": "training/training_scene.tscn",
+            "speedup": 1.0,
+            "n_parallel": 1
+        }
 
-    train_difficulty("1k",   dict(pi=[32, 32], vf=[32, 32]), 3_000_000, env_params)
-    train_difficulty("10k",  dict(pi=[64, 64], vf=[64, 64]), 10_000_000, env_params)
-    train_difficulty("100k", dict(pi=[128, 128], vf=[128, 128]), 30_000_000, env_params)
+    train_difficulty("1k",   dict(pi=[32, 32], vf=[32, 32]), 1_000_000, env_params)
+    train_difficulty("10k",  dict(pi=[64, 64], vf=[64, 64]), 5_000_000, env_params)
+    train_difficulty("100k", dict(pi=[128, 128], vf=[128, 128]), 10_000_000, env_params)

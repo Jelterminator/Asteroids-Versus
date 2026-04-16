@@ -11,7 +11,7 @@ var F_jet = PhysicsConfig.PLAYER_THRUST
 var v_rot = PhysicsConfig.PLAYER_ROT_SPEED
 var p_laser = PhysicsConfig.PLAYER_LASER_RECOIL_MOMENTUM
 var laser_cooldown = 0.0
-var spawn_timer = 0.1 # Reduced for training hyper-aggression
+var spawn_timer = PhysicsConfig.PLAYER_SPAWN_TIMER
 var type = "player"
 var is_local = true # Set to false for remote players in Online mode
 var p_name = "Player 1"
@@ -77,6 +77,7 @@ func _ready():
 	add_child(p_emit)
 
 func _physics_process(delta):
+	if is_exploding: return
 	var p_mc = p.length() / (m * PhysicsConfig.C)
 	var gamma = sqrt(1.0 + p_mc * p_mc)
 	
@@ -247,6 +248,7 @@ func hit_by_laser(_energy, _shooter = null):
 	is_exploding = true
 	GameState.notify_death(p_name)
 	spawn_explosion()
+	visible = false
 	
 	if not has_meta("is_ai") and GameState.current_mode != GameState.GameMode.AI:
 		queue_free()
@@ -255,7 +257,7 @@ func reset_player(new_pos: Vector2):
 	pos = new_pos
 	self.position = pos
 	p = Vector2.ZERO
-	spawn_timer = 0.1
+	spawn_timer = PhysicsConfig.PLAYER_SPAWN_TIMER
 	laser_cooldown = 0.0
 	is_exploding = false
 	visible = true

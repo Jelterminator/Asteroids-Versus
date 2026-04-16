@@ -3,7 +3,7 @@ extends Node2D
 @onready var massives_container = $Massives
 var asteroid_scene: PackedScene
 var match_ticks = 0
-const MAX_MATCH_TICKS = 1200 # 5 seconds @ 240Hz for hyper-aggressive signal assignment
+const MAX_MATCH_TICKS = 6000 # 25 seconds @ 240Hz (base)
 # Note: At 100x speedup, this will pass in ~1 second of real time.
 
 func _ready():
@@ -49,46 +49,31 @@ func _on_game_over(winner_name, is_match_over = false):
 	# If we are playing normally, do whatever UI/Reset logic you want
 	reset_match(is_match_over)
 
-func reset_match(is_match_over = false):
+func reset_match(is_match_over = false, is_master = true):
 	match_ticks = 0
 	
-	if is_match_over:
-		GameState.reset_match_state() # Reset wins to 0-0
-	else:
-		GameState.reset_win_state() # Just clear current round winner
+	if is_master:
+		if is_match_over:
+			GameState.reset_match_state() # Reset wins to 0-0
+		else:
+			GameState.reset_win_state() # Just clear current round winner
+		
+		# 1. Clear Debris
+		get_tree().call_group("lasers", "queue_free")
+		get_tree().call_group("asteroids", "queue_free")
 	
-	# 1. Clear Debris
-	get_tree().call_group("lasers", "queue_free")
-	get_tree().call_group("asteroids", "queue_free")
-	
-	# 2. Reset Players
+	# 2. Reset Players (Wait one frame to ensure queue_free debris is gone)
+	call_deferred("_deferred_player_reset")
+		
+	# 3. Regenerate Asteroids (Only if master)
+	if is_master:
+		call_deferred("spawn_initial_asteroids")
+
+func _deferred_player_reset():
 	var p1 = massives_container.get_node_or_null("Player")
 	var p2 = massives_container.get_node_or_null("Player2")
-	
-	# Add Spawn Jitter to break corner-circling local optima
-	var jitter = Vector2(randf_range(-50, 50), randf_range(-50, 50))
-	
-	if p1:
-		p1.pos = Vector2(PhysicsConfig.WORLD_HALF_SIZE - 50.0, PhysicsConfig.WORLD_HALF_SIZE - 50.0) + jitter
-		p1.p = Vector2.ZERO
-		p1.orientation = Vector2(1, 1).normalized()
-		p1.spawn_timer = 1.0 
-		p1.laser_cooldown = 0.0 
-	if p2:
-		p2.pos = Vector2(PhysicsConfig.WORLD_HALF_SIZE + 50.0, PhysicsConfig.WORLD_HALF_SIZE + 50.0) - jitter
-		p2.p = Vector2.ZERO
-		p2.orientation = Vector2(-1, -1).normalized()
-		p2.spawn_timer = 1.0 
-		p2.laser_cooldown = 0.0
-		
-	# 3. Regenerate Asteroids (Clean Room for 1k)
-	var args_reset = OS.get_cmdline_args()
-	var is_1k = false
-	for arg in args_reset:
-		if arg == "--brain_name=1k": is_1k = true
-	
-	if not is_1k:
-		call_deferred("spawn_initial_asteroids")
+	if p1: p1.reset_player(Vector2(125, 125))
+	if p2: p2.reset_player(Vector2(375, 375))
 
 func spawn_initial_asteroids():
 	var num_asteroids = randi_range(5, 15)

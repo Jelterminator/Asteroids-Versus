@@ -10,6 +10,7 @@ var brain = null
 # Removed the strict ": RewardManager" typing so headless mode doesn't panic
 var reward_manager 
 var gravity_basis: Array = []
+var _pending_done: bool = false
 
 func _ready():
 	add_to_group("AGENT")
@@ -142,20 +143,20 @@ func get_gravity_harmonics(gravity_manager) -> Array:
 	
 	var harmonics = []
 	var grid = gravity_manager.g_tt_grid
-	var steps = [0, 4, 8, 12] # 4x4 sample points
+	var steps = [0, 2, 4, 6, 8, 10, 12, 14] # 8x8 sample points
 	
 	for basis in gravity_basis:
 		var real_sum: float = 0.0
 		var imag_sum: float = 0.0
 		var s_idx = 0
 		
-		# Sample the 4x4 grid
+		# Sample the 8x8 grid (64 points total)
 		for sy in steps:
 			var y_off = sy * 16
 			for sx in steps:
 				var g_tt = grid[y_off + sx]
 				
-				# Dot product with pre-calculated basis
+				# Dot product with pre-calculated 8x8 basis
 				real_sum += g_tt * basis[0][s_idx]
 				imag_sum += g_tt * basis[1][s_idx]
 				s_idx += 1
@@ -167,12 +168,12 @@ func get_gravity_harmonics(gravity_manager) -> Array:
 
 func _init_gravity_basis():
 	gravity_basis.clear()
-	# Reduced to top 6 frequency pairs (12 vars total)
+	# Standardization on 6 frequency pairs for 8x8 grid
 	var frequencies = [
 		Vector2(1, 0), Vector2(0, 1), Vector2(1, 1), 
 		Vector2(2, 0), Vector2(0, 2), Vector2(2, 1)
 	]
-	var steps = [0, 4, 8, 12]
+	var steps = [0, 2, 4, 6, 8, 10, 12, 14]
 	const INV_N_TAU = -TAU / 16.0
 	
 	for uv in frequencies:
@@ -197,7 +198,7 @@ func get_action_space() -> Dictionary:
 	}
 
 func set_action(action: Dictionary):
-	if not ship or not is_instance_valid(ship): return
+	if not ship or not is_instance_valid(ship) or get_done(): return
 	ship.ai_thrust = action["thrust"][0] > 0.0
 	ship.ai_rot_dir = (1.0 if action["rot_right"][0] > 0.0 else 0.0) - (1.0 if action["rot_left"][0] > 0.0 else 0.0)
 	ship.ai_fire = action["fire"][0] > 0.0
@@ -211,10 +212,18 @@ func get_reward() -> float:
 
 func get_done() -> bool:
 	if not ship or not is_instance_valid(ship): return true
-	return ship.is_exploding or GameState.winner != ""
+	if ship.is_exploding or GameState.winner != "":
+		_pending_done = true
+	return _pending_done
 
 func reset():
-	var main = get_node_or_null("/root/Main") # Make sure this matches your scene root name!
+	super.reset()
+	_pending_done = false
+	# Only the master agent triggers the global asteroid/laser cleanup
+	var is_master = (name == "AIController1" or name == "AIController")
+	print("RL-AGENT: Reset for ", name, " | Master: ", is_master)
+	
+	var main = get_tree().current_scene
 	if main and main.has_method("reset_match"):
 		var is_match_over = (GameState.p1_wins >= GameState.WINS_TO_WIN_MATCH or GameState.p2_wins >= GameState.WINS_TO_WIN_MATCH)
-		main.reset_match(is_match_over)
+		main.reset_match(is_match_over, is_master)
