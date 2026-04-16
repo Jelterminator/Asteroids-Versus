@@ -1,0 +1,104 @@
+/* Minimalist Starfield Aesthetic */
+:root {
+    --bg-color: #0a0a0a;
+    --star-grey: #444444;
+    --star-light: #888888;
+    --border-color: #333333;
+}
+
+#starfield-bg {
+    position: fixed;
+    /* Keep it fixed to the viewport */
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    /* Move it behind the game and status text */
+    display: block;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #141414;
+    /* This acts as the base space color */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    position: relative;
+    /* Context for z-index */
+}
+
+#game-container {
+    z-index: 1;
+    /* Ensure the game sits on top of the stars */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: min(95vw, 95vh * (724 / 450));
+    aspect-ratio: 724 / 450;
+    background-color: #000;
+    /* Any gaps will now be pure black */
+    overflow: hidden;
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* Keeps pixels square */
+    image-rendering: pixelated;
+    /* Keeps pixels sharp */
+}
+
+#status {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    letter-spacing: 2px;
+    font-size: 0.8rem;
+    color: #444;
+}
+
+footer {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    color: #333;
+}
+
+#loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #141414;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: opacity 0.5s ease-out;
+}
+
+.loader-text {
+    animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}

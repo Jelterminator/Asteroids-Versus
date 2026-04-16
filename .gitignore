@@ -1,0 +1,25 @@
+# Godot 4+ specific ignores
+.godot/
+
+# Python / AI ignores
+__pycache__/
+*.py[cod]
+*$py.class
+models/*.pkl
+models/*.zip
+models/checkpoints/**
+!models/.gitkeep
+!models/brain_1k.json
+!models/brain_10k.json
+!models/brain_100k.json
+
+# Project specific ignores
+*.tmp
+venv/
+addons/
+lib/
+logs/
+scratch/
+live_godot_pids.txt
+training/live_godot_pids.txt
+training/debug_log.txt

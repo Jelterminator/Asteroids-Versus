@@ -1,0 +1,160 @@
+extends Node2D
+
+@onready var massives_container = $GameContainer/GameViewport/Level/Massives
+@onready var game_viewport = $GameContainer/GameViewport
+@onready var tiled_display = $IsometricBox/WorldRotation/TiledDisplay
+@onready var game_over_ui = $GameOverUI
+@onready var winner_label = $GameOverUI/VBoxContainer/WinnerLabel
+@onready var btn_restart = $GameOverUI/VBoxContainer/BtnRestart
+@onready var btn_menu = $GameOverUI/VBoxContainer/BtnMenu
+@onready var p1_score_label = $HUD/P1Score
+@onready var p2_score_label = $HUD/P2Score
+@onready var pause_btn = $HUD/PauseButton
+@onready var hud_menu_btn = $HUD/MenuButton
+
+var asteroid_scene: PackedScene
+
+func _ready():
+	# Configure tiled display
+	tiled_display.texture = game_viewport.get_texture()
+	asteroid_scene = load("res://asteroid.tscn")
+	seed(Time.get_ticks_msec())
+	GameState.reset_win_state()
+	GameState.score_changed.connect(_on_score_changed)
+	pause_btn.pressed.connect(_on_pause_pressed)
+	hud_menu_btn.pressed.connect(_on_menu_pressed)
+	_on_score_changed(GameState.p1_wins, GameState.p2_wins)
+	
+	# Connect Game Over
+	GameState.game_over.connect(_on_game_over)
+	btn_restart.pressed.connect(_on_restart_pressed)
+	btn_menu.pressed.connect(_on_menu_pressed)
+	
+	# Handle Player Initialization based on Mode
+	if GameState.current_mode == GameState.GameMode.AI:
+		call_deferred("_setup_ai")
+
+	elif GameState.current_mode == GameState.GameMode.ONLINE:
+		# Prepare for multiplayer synchronizer setup in Phase 2
+		pass
+
+	spawn_initial_asteroids()
+
+func _setup_ai():
+	print("Main: Initializing AI Challenge...")
+	var ai_controller_script = load("res://AIController.gd")
+	var ai = Node2D.new()
+	ai.set_script(ai_controller_script)
+	ai.name = "AIController2"
+	ai.target_player_name = "Player2"
+	
+	# Map difficulty to brain
+	var difficulty_map = {1: "1k", 2: "10k", 3: "100k"}
+	ai.brain_name = difficulty_map.get(GameState.selected_ai_difficulty, "1k")
+	
+	add_child(ai)
+	
+	# Ensure Player 2 knows it's AI
+	var p2 = massives_container.get_node_or_null("Player2")
+	if p2:
+		p2.set_meta("is_ai", true)
+		print("Main: Player 2 assigned AI control (", ai.brain_name, ")")
+
+func spawn_initial_asteroids():
+	var num_asteroids = randi_range(5, 15)
+	var total_target_mass = PhysicsConfig.ASTEROID_INITIAL_WEIGHT_TOTAL
+	
+	var player1 = massives_container.get_node_or_null("Player")
+	var player2 = massives_container.get_node_or_null("Player2")
+	if player1 and player2:
+		var midpoint = (player1.position + player2.position) / 2.0
+		var intervening_mass = 400.0
+		spawn_asteroid(intervening_mass, midpoint)
+		total_target_mass -= intervening_mass
+	
+	var masses = []
+	var total_random_weight = 0.0
+	for i in range(num_asteroids):
+		var weight = randf_range(0.1, 1.0)
+		masses.append(weight)
+		total_random_weight += weight
+	
+	for i in range(num_asteroids):
+		var asteroid_mass = (masses[i] / total_random_weight) * total_target_mass
+		spawn_asteroid(asteroid_mass)
+
+
+
+func spawn_asteroid(m_val, forced_pos = null):
+	var max_attempts = 150
+	var success = false
+	var spawn_pos = Vector2.ZERO
+	var radius = pow(m_val, 1.0/3.0) * 4.0
+	
+	if forced_pos != null:
+		spawn_pos = forced_pos
+		success = true
+	else:
+		for attempt in range(max_attempts):
+			spawn_pos = Vector2(randf_range(PhysicsConfig.WORLD_SPAWN_MARGIN, PhysicsConfig.WORLD_SIZE - PhysicsConfig.WORLD_SPAWN_MARGIN), randf_range(PhysicsConfig.WORLD_SPAWN_MARGIN, PhysicsConfig.WORLD_SIZE - PhysicsConfig.WORLD_SPAWN_MARGIN))
+			if is_valid_pos(spawn_pos, radius):
+				success = true
+				break
+	
+	if success:
+		var a = asteroid_scene.instantiate()
+		a.m = m_val
+		a.pos = spawn_pos
+		var drift_speed = randf_range(1.0, 5.0)
+		a.p = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized() * drift_speed * m_val
+		massives_container.add_child(a)
+
+func is_valid_pos(pos, radius):
+	var buffer = 10.0
+	for node in get_tree().get_nodes_in_group("massives"):
+		if not node is Node2D: continue
+		var other_m = node.m if "m" in node else PhysicsConfig.PLAYER_DEFAULT_MASS
+		var other_radius = pow(other_m, 1.0/3.0) * 4.0
+		if pos.distance_to(node.position) < (radius + other_radius + buffer):
+			return false
+	return true
+
+func _on_score_changed(p1, p2):
+	p1_score_label.text = "P1: %d" % p1
+	p2_score_label.text = "P2: %d" % p2
+
+func _on_pause_pressed():
+	get_tree().paused = !get_tree().paused
+	pause_btn.text = "RESUME" if get_tree().paused else "PAUSE"
+	hud_menu_btn.visible = get_tree().paused
+
+func _on_game_over(winner_name, is_match_over):
+	if is_match_over:
+		winner_label.text = "MATCH WINNER: " + winner_name
+		btn_restart.text = "NEW MATCH"
+		btn_restart.visible = true
+		btn_menu.visible = true
+		game_over_ui.visible = true
+	else:
+		winner_label.text = winner_name + " WINS THE ROUND!"
+		btn_restart.visible = false
+		btn_menu.visible = false
+		game_over_ui.visible = true
+		
+		# Auto-restart after 3 seconds
+		await get_tree().create_timer(3.0).timeout
+		if game_over_ui.visible: # Ensure we didn't exit to menu
+			_on_restart_pressed()
+
+func _on_restart_pressed():
+	get_tree().paused = false
+	# Check for match completion
+	if GameState.p1_wins >= GameState.WINS_TO_WIN_MATCH or GameState.p2_wins >= GameState.WINS_TO_WIN_MATCH:
+		GameState.reset_match_state()
+	else:
+		GameState.reset_win_state() # Just reset current round winner
+	get_tree().reload_current_scene()
+
+func _on_menu_pressed():
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://MainMenu.tscn")

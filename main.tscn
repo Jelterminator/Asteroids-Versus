@@ -1,0 +1,170 @@
+[gd_scene load_steps=10 format=3 uid="uid://dqfuxh4nf4kh7"]
+
+[ext_resource type="Script" uid="uid://bpufphy485hw6" path="res://GravityManager.gd" id="1_h2yge"]
+[ext_resource type="Script" uid="uid://cl4uueyfm405i" path="res://Main.gd" id="1_main"]
+[ext_resource type="Script" uid="uid://c22t4omm5wesk" path="res://Player.gd" id="2_1bvp3"]
+[ext_resource type="Script" uid="uid://b3bie1m4cx5x7" path="res://Player2.gd" id="3_1bvp3"]
+[ext_resource type="Script" uid="uid://dv6qm17dne6kw" path="res://Starfield.gd" id="6_stars"]
+[ext_resource type="Shader" uid="uid://bwntvun8aow7s" path="res://tiled_fade.gdshader" id="7_shader"]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_v1"]
+viewport_path = NodePath("GameContainer/GameViewport")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_m1"]
+resource_local_to_scene = true
+shader = ExtResource("7_shader")
+
+[node name="Main" type="Node2D" unique_id=1511446431]
+script = ExtResource("1_main")
+
+[node name="Starfield" type="Node2D" parent="."]
+script = ExtResource("6_stars")
+
+[node name="GameContainer" type="SubViewportContainer" parent="."]
+offset_left = -1000.0
+offset_top = -1000.0
+offset_right = -488.0
+offset_bottom = -488.0
+
+[node name="GameViewport" type="SubViewport" parent="GameContainer"]
+transparent_bg = true
+handle_input_locally = false
+gui_disable_input = true
+size = Vector2i(512, 512)
+render_target_update_mode = 4
+
+[node name="GameCamera" type="Camera2D" parent="GameContainer/GameViewport"]
+position = Vector2(256, 256)
+
+
+[node name="Level" type="Node2D" parent="GameContainer/GameViewport"]
+
+[node name="GravityManager" type="Node2D" parent="GameContainer/GameViewport/Level" unique_id=1462632614]
+script = ExtResource("1_h2yge")
+
+[node name="Massives" type="Node2D" parent="GameContainer/GameViewport/Level" unique_id=961184539]
+
+[node name="Player" type="CharacterBody2D" parent="GameContainer/GameViewport/Level/Massives" unique_id=797830026]
+script = ExtResource("2_1bvp3")
+
+[node name="Player2" type="CharacterBody2D" parent="GameContainer/GameViewport/Level/Massives" unique_id=1768807086]
+script = ExtResource("3_1bvp3")
+
+[node name="MainCamera" type="Camera2D" parent="."]
+position = Vector2(400, 225)
+
+[node name="IsometricBox" type="Node2D" parent="."]
+position = Vector2(400, 225)
+scale = Vector2(3, 1.5)
+
+[node name="WorldRotation" type="Node2D" parent="IsometricBox"]
+rotation = 0.785398
+
+[node name="TiledDisplay" type="Sprite2D" parent="IsometricBox/WorldRotation"]
+texture_repeat = 2
+material = SubResource("ShaderMaterial_m1")
+texture = SubResource("ViewportTexture_v1")
+region_enabled = true
+region_rect = Rect2(-512, -512, 1536, 1536)
+
+[node name="HUD" type="CanvasLayer" parent="."]
+process_mode = 3
+
+[node name="P2Score" type="Label" parent="HUD"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 110.0
+offset_bottom = 33.0
+theme_override_colors/font_color = Color(1, 0.2, 0, 1)
+text = "P2: 0"
+
+[node name="PauseButton" type="Button" parent="HUD"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -80.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = 41.0
+grow_horizontal = 0
+text = "PAUSE"
+
+[node name="MenuButton" type="Button" parent="HUD"]
+visible = false
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -80.0
+offset_top = 45.0
+offset_right = -10.0
+offset_bottom = 76.0
+grow_horizontal = 0
+text = "MENU"
+
+[node name="Branding" type="Label" parent="HUD"]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -33.0
+offset_right = 160.0
+offset_bottom = -10.0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
+text = "asteroids versus"
+
+[node name="P1Score" type="Label" parent="HUD"]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -110.0
+offset_top = -33.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0, 0.5, 1, 1)
+text = "P1: 0"
+horizontal_alignment = 2
+
+[node name="GameOverUI" type="CanvasLayer" parent="."]
+layer = 10
+visible = false
+
+[node name="ColorRect" type="ColorRect" parent="GameOverUI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.521569)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="GameOverUI"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -100.0
+offset_top = -60.0
+offset_right = 100.0
+offset_bottom = 60.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="WinnerLabel" type="Label" parent="GameOverUI/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "WINNER!"
+horizontal_alignment = 1
+
+[node name="BtnRestart" type="Button" parent="GameOverUI/VBoxContainer"]
+layout_mode = 2
+text = "RESTART"
+
+[node name="BtnMenu" type="Button" parent="GameOverUI/VBoxContainer"]
+layout_mode = 2
+text = "MAIN MENU"

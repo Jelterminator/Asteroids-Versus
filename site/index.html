@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asteroids Versus | Static</title>
+    <link rel="stylesheet" href="style.css?v=2">
+    <!-- Background Starfield logic -->
+    <script src="stars.js"></script>
+    <!-- COI Service Worker for SharedArrayBuffer support -->
+    <script src="coi-serviceworker.min.js"></script>
+</head>
+<body>
+
+    <div id="status">ASTEROIDS_VERSUS // SYSTEM_ONLINE</div>
+
+    <div id="game-container">
+        <div id="loading-overlay">
+            <div class="loader-text">INITIALIZING_ENGINE...</div>
+        </div>
+        <canvas id="canvas">
+            HTML5 canvas appeared to be unsupported by your browser.
+        </canvas>
+    </div>
+
+    <footer>
+        PIXEL_PHYSICS // NEURAL_NETWORK // EST. 2026
+    </footer>
+
+    <!-- Godot Loader Script (Supplied by user export) -->
+    <script src="asteroids_versus.js?v=2"></script>
+    <!-- Our wrapper logic -->
+    <script src="main.js?v=2"></script>
+</body>
+</html>

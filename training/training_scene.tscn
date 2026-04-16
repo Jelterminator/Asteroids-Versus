@@ -1,0 +1,41 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://training/TrainingMain.gd" id="1_training"]
+[ext_resource type="Script" path="res://GravityManager.gd" id="2_gravity"]
+[ext_resource type="Script" path="res://Player.gd" id="3_p1"]
+[ext_resource type="Script" path="res://Player2.gd" id="4_p2"]
+[ext_resource type="Script" path="res://addons/godot_rl_agents/sync.gd" id="5_sync"]
+[ext_resource type="Script" path="res://training/AIController.gd" id="1_ai_controller"]
+
+[node name="Training" type="Node2D"]
+script = ExtResource("1_training")
+
+[node name="Sync" type="Node" parent="."]
+process_mode = 3
+script = ExtResource("5_sync")
+control_mode = 1
+speed_up = 1.0
+
+[node name="GravityManager" type="Node2D" parent="."]
+script = ExtResource("2_gravity")
+
+[node name="Massives" type="Node2D" parent="."]
+
+[node name="Player" type="CharacterBody2D" parent="Massives"]
+script = ExtResource("3_p1")
+
+[node name="Player2" type="CharacterBody2D" parent="Massives"]
+script = ExtResource("4_p2")
+
+[node name="AIController1" type="Node2D" parent="."]
+process_mode = 3
+script = ExtResource("1_ai_controller")
+target_player_name = "Player"
+control_mode = 0
+
+[node name="AIController2" type="Node2D" parent="."]
+process_mode = 3
+script = ExtResource("1_ai_controller")
+target_player_name = "Player2"
+control_mode = 0
+
