@@ -3,8 +3,8 @@ services:
     name: asteroids-signaling
     env: node
     plan: free
-    buildCommand: npm install
-    startCommand: node server.js
+    buildCommand: cd server && npm install
+    startCommand: node server/server.js
     envVars:
       - key: PORT
         value: 8080

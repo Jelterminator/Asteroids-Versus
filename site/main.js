@@ -37,11 +37,11 @@ const VERSION = "2.2"; // Cache-busting version
 
         const engine = new Engine(GODOT_CONFIG);
         const isIsolated = window.crossOriginIsolated;
+        console.log(`[Security] Cross-Origin Isolated: ${isIsolated ? 'YES ✅' : 'NO ❌'}`);
 
         if (!isIsolated) {
             updateStatus("NOTICE: RE-TRYING_ISOLATION...");
-            // The Service Worker will reload the page automatically if it can.
-            // If it doesn't, we show a helpful error.
+            console.warn("[Security] SharedArrayBuffer will NOT be available without COOP/COEP headers.");
         }
 
         updateStatus("INITIALIZING...");

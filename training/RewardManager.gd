@@ -61,11 +61,11 @@ func compute_step_reward(_delta: float) -> float:
 		"1k":
 			# Aggressive Aggression: Must move, must aim, MUST shoot.
 			# BREAK PACIFIST LOOP: Increased pressure to shoot and removed miss penalty.
-			if ship.ai_thrust: reward += 0.01
-			reward += 0.1 * aim_q # Doubled aim focus
+			if ship.ai_thrust: reward += 0.001
+			reward += 0.01 * aim_q # Doubled aim focus
 
 			# Force decision: Penalty for NOT shooting is now much higher than any miss.
-			if ship.laser_cooldown <= 0: reward -= 0.08
+			if ship.laser_cooldown <= 0: reward -= 0.001
 			
 			if ship.ai_fire:
 				if aim_q > 0.8:
