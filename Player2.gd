@@ -2,10 +2,10 @@ extends CharacterBody2D
 
 signal collided(collider)
 
-@export var pos = Vector2(125, 125)
+@export var pos = Vector2(375, 375)
 @export var m = PhysicsConfig.PLAYER_DEFAULT_MASS
 @export var p = Vector2(0, 0)
-@export var orientation = Vector2(1, 1)
+@export var orientation = Vector2(-1, -1)
 
 var F_jet = PhysicsConfig.PLAYER_THRUST
 var v_rot = PhysicsConfig.PLAYER_ROT_SPEED
@@ -54,21 +54,21 @@ func _ready():
 	# Thruster
 	var p_emit = CPUParticles2D.new()
 	p_emit.name = "ThrusterParticles"
-	p_emit.amount = 24
+	p_emit.amount = 32
 	p_emit.lifetime = 0.5
 	p_emit.spread = 20.0
 	p_emit.gravity = Vector2.ZERO
 	p_emit.initial_velocity_min = 80.0
-	p_emit.scale_amount_min = 4.0
-	p_emit.scale_amount_max = 4.0
+	p_emit.scale_amount_min = 2.5
+	p_emit.scale_amount_max = 2.5
 	
 	var g = Gradient.new()
 	g.interpolation_mode = Gradient.GRADIENT_INTERPOLATE_CONSTANT
-	g.add_point(0.0, Color(1, 1, 1, 1))   # White
-	g.add_point(0.1, Color(1, 1, 0, 1))   # Yellow
-	g.add_point(0.25, Color(1, 0.5, 0, 1)) # Orange
-	g.add_point(0.4, Color(1, 0, 0, 1))   # Red
-	g.add_point(0.8, Color(1, 0, 0, 0.33)) # 33% Opacity Red
+	g.add_point(0.0, Color(1, 1, 1, 1.0))    # 1: White (Opaque)
+	g.add_point(0.1, Color(1, 0.9, 0.6, 0.8)) # 2: Pale Orange
+	g.add_point(0.25, Color(1, 0.6, 0, 0.5))  # 3: Orange
+	g.add_point(0.5, Color(1, 0.2, 0, 0.2))   # 4: Blood Orange
+	g.add_point(0.8, Color(0.8, 0, 0, 0.0))   # 5: Red Faded (Transparent)
 	p_emit.color_ramp = g
 	
 	p_emit.emitting = false
@@ -146,12 +146,12 @@ func _physics_process(delta):
 		if GameState.current_mode != GameState.GameMode.ONLINE or multiplayer.is_server():
 			p -= orientation * p_laser # Recoil
 			var l = laser_scene.instantiate()
-		l.pos = pos + orientation * 20
-		l.p = orientation
-		l.energy = p_laser * l.C_SPEED
-		l.shooter = self
-		get_node("../..").add_child(l)
-		laser_cooldown = PhysicsConfig.PLAYER_LASER_COOLDOWN
+			l.pos = pos + orientation * 20
+			l.p = orientation
+			l.energy = p_laser * l.C_SPEED
+			l.shooter = self
+			get_node("../..").add_child(l)
+			laser_cooldown = PhysicsConfig.PLAYER_LASER_COOLDOWN
 
 	# 2. Gravity
 	var eps = PhysicsConfig.PLAYER_GRAVITY_EPS
