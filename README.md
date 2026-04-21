@@ -53,10 +53,13 @@ When a laser hits an asteroid, it vaporizes it into fragments. To ensure the $n-
 
 ## 🌐 Networking
 
-**Peer-to-Peer WebRTC Integration**
-Asteroids Versus uses explicit WebRTC topologies for near-zero latency dueling, rather than trusting archaic polling or locking.
-- A Node.js signaling server intercepts and silently match-makes peers (1v1 Lobbying system), removing the headache from the Host.
-- Features `COOP/COEP` delivery models for SharedArrayBuffers in WebGL.
+### Asymmetric Dual-Synchronizer Architecture
+Asteroids Versus implements a high-fidelity, peer-to-peer synchronization model designed specifically for the low-latency demands of relativistic physics. 
+
+- **Host-Authoritative State Replication**: The Host maintains the absolute truth of the gravitational field, asteroid positions, and projectile trajectories. High-frequency state snapshots are serialized and pushed to peers, ensuring perfect synchronization across the torus.
+- **Client Input Replication**: To minimize perceived input lag, Clients replicate only raw input vectors (Thrust/Fire) to the Host. The Host then processes these inputs within its local simulation and reconciles the resulting delta back to the Client.
+- **WebRTC Mesh Messaging**: Instead of archaic client-server polling, the game utilizes the `WebRTCDataChannel`. Packets are optimized for MTU limits, preventing fragmentation and ensuring that relativistic state updates arrive within single-digit millisecond windows.
+- **Express Signaling & Isolation**: A dedicated Node.js signaling server handles 1v1 matchmaking and P2P handshakes via WebSockets. The delivery pipeline enforces **Cross-Origin Isolation** (COOP/COEP) headers, enabling the Godot engine to leverage **SharedArrayBuffers** for multi-threaded physics calculations in-browser.
 
 ## 🧠 Godot RL & Embedded Neuro-Inference
 

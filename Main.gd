@@ -272,6 +272,12 @@ func _on_game_over(winner_name, is_match_over):
 		btn_restart.visible = true
 		btn_menu.visible = true
 		game_over_ui.visible = true
+		
+		if GameState.current_mode == GameState.GameMode.SCREENSAVER:
+			# Auto-restart match in screensaver mode after 5 seconds
+			await get_tree().create_timer(5.0).timeout
+			if game_over_ui.visible:
+				_on_restart_pressed()
 	else:
 		winner_label.text = winner_name + " WINS THE ROUND!"
 		btn_restart.visible = false
@@ -285,6 +291,12 @@ func _on_game_over(winner_name, is_match_over):
 
 func _on_restart_pressed():
 	get_tree().paused = false
+	
+	if GameState.current_mode == GameState.GameMode.ONLINE:
+		# Per requirement, return to Lobby for a new match search
+		get_tree().change_scene_to_file("res://multiplayer/Lobby.tscn")
+		return
+		
 	# Check for match completion
 	if GameState.p1_wins >= GameState.WINS_TO_WIN_MATCH or GameState.p2_wins >= GameState.WINS_TO_WIN_MATCH:
 		if GameState.current_mode == GameState.GameMode.SCREENSAVER:

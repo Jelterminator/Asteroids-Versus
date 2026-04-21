@@ -12,12 +12,9 @@ var joined := false
 
 # --- API CONFIG ---
 var signaling_url = "wss://asteroids-versus.onrender.com" # "ws://localhost:8081"
-var supabase_url = "https://gonistzmzzmtzrcdqpud.supabase.co"
-var supabase_key = "sb_publishable_WYhmYscnjsP9zgl6js_wJg_RGkzudbV"
 
 # --- UI NODES ---
 var http_fetch: HTTPRequest
-var http_save: HTTPRequest
 
 func _ready():
 	_load_local_name()
@@ -30,9 +27,6 @@ func _ready():
 	http_fetch = HTTPRequest.new()
 	add_child(http_fetch)
 	http_fetch.request_completed.connect(_on_leaderboard_fetched)
-	
-	http_save = HTTPRequest.new()
-	add_child(http_save)
 	
 	# Initial fetch
 	_fetch_leaderboard()
@@ -107,10 +101,6 @@ func _on_peer_connected(id: int):
 	if multiplayer.get_unique_id() == 1:
 		client.seal_lobby()
 		
-	# Before starting, if we have a streak, report it (in case we didn't before)
-	if GameState.current_streak > 0:
-		_save_streak(GameState.player_name, GameState.current_streak)
-		
 	await get_tree().create_timer(1.0).timeout
 	GameState.start_game(GameState.GameMode.ONLINE)
 
@@ -133,10 +123,10 @@ func _on_cancel_pressed():
 
 # --- SUPABASE LOGIC ---
 func _fetch_leaderboard():
-	var url = supabase_url + "/rest/v1/high_scores?select=name,streak&order=streak.desc&limit=10"
+	var url = GameState.supabase_url + "/rest/v1/high_scores?select=name,streak&order=streak.desc&limit=10"
 	var headers = [
-		"apikey: " + supabase_key,
-		"Authorization: Bearer " + supabase_key
+		"apikey: " + GameState.supabase_key,
+		"Authorization: Bearer " + GameState.supabase_key
 	]
 	http_fetch.request(url, headers, HTTPClient.METHOD_GET)
 
@@ -173,19 +163,7 @@ func _on_leaderboard_fetched(_result, response_code, _headers, body):
 			else:
 				lb_col_2.add_child(label)
 
-func _save_streak(p_name, streak):
-	var url = supabase_url + "/rest/v1/high_scores"
-	var headers = [
-		"apikey: " + supabase_key,
-		"Authorization: Bearer " + supabase_key,
-		"Content-Type: application/json",
-		"Prefer: return=minimal"
-	]
-	var body = JSON.stringify({
-		"name": p_name,
-		"streak": streak
-	})
-	http_save.request(url, headers, HTTPClient.METHOD_POST, body)
+# Note: _save_streak is now handled by GameState.gd singleton
 
 func _notification(what):
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:

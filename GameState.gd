@@ -10,13 +10,26 @@ var p2_brain_name: String = "1k"
 var player_name: String = "Pilot"
 var current_streak: int = 0
 
+# --- API CONFIG ---
+var supabase_url = "https://gonistzmzzmtzrcdqpud.supabase.co"
+var supabase_key = "sb_publishable_WYhmYscnjsP9zgl6js_wJg_RGkzudbV"
+
 signal game_over(winner_name, is_match_over)
 signal score_changed(p1_wins, p2_wins)
+signal streak_updated(new_streak)
+
+var http_save: HTTPRequest
 
 var p1_wins = 0
 var p2_wins = 0
 var winner = "" # Current round winner
 const WINS_TO_WIN_MATCH = 3
+
+func _ready():
+	load_persistence()
+	
+	http_save = HTTPRequest.new()
+	add_child(http_save)
 
 func start_game(mode: GameMode, difficulty: int = 1):
 	reset_match_state()
@@ -24,13 +37,14 @@ func start_game(mode: GameMode, difficulty: int = 1):
 	selected_ai_difficulty = difficulty
 	get_tree().change_scene_to_file("res://main.tscn")
 
-func notify_death(player_name: String):
+@rpc("any_peer", "call_local", "reliable")
+func notify_death(p_killed_name: String):
 	if winner != "": return # Already ended this round
 	
-	if player_name == "TIMEOUT_DRAW":
+	if p_killed_name == "TIMEOUT_DRAW":
 		winner = "TIMEOUT_DRAW"
 	else:
-		winner = "Player 2" if player_name == "Player 1" else "Player 1"
+		winner = "Player 2" if p_killed_name == "Player 1" else "Player 1"
 		
 		if winner == "Player 1":
 			p1_wins += 1
@@ -47,11 +61,24 @@ func notify_death(player_name: String):
 		if i_won:
 			current_streak += 1
 			print("GameState: Win streak increased to ", current_streak)
+			_save_streak(player_name, current_streak) # Immediate upload
 		else:
 			current_streak = 0
 			print("GameState: Win streak reset")
+		
+		save_persistence()
+		streak_updated.emit(current_streak)
+		
+		# SEVER CONNECTION: Per requirement, online matches disconnect immediately after finishing
+		# We wait a tiny bit to ensure signals have finished processing on all menus
+		call_deferred("_sever_online_connection")
 			
 	game_over.emit(winner, is_match_over)
+
+func _sever_online_connection():
+	if multiplayer.multiplayer_peer != null:
+		print("GameState: Severing online connection after match completion.")
+		multiplayer.multiplayer_peer = null
 
 func reset_win_state():
 	winner = ""
@@ -82,3 +109,35 @@ func randomize_screensaver_brains():
 		p1_brain_name = "1k"
 		p2_brain_name = "1k"
 		print("GameState: No brains found in models/, defaulting to 1k")
+
+func save_persistence():
+	var config = ConfigFile.new()
+	# Load existing to not overwrite other settings (like name)
+	config.load("user://settings.cfg")
+	config.set_value("Player", "streak", current_streak)
+	config.save("user://settings.cfg")
+	print("GameState: Persistence saved (streak=", current_streak, ")")
+
+func load_persistence():
+	var config = ConfigFile.new()
+	var err = config.load("user://settings.cfg")
+	if err == OK:
+		current_streak = config.get_value("Player", "streak", 0)
+		print("GameState: Persistence loaded (streak=", current_streak, ")")
+
+func _save_streak(p_name, streak):
+	if streak <= 0: return # Only save positive streaks
+	
+	var url = supabase_url + "/rest/v1/high_scores"
+	var headers = [
+		"apikey: " + supabase_key,
+		"Authorization: Bearer " + supabase_key,
+		"Content-Type: application/json",
+		"Prefer: return=minimal"
+	]
+	var body = JSON.stringify({
+		"name": p_name,
+		"streak": streak
+	})
+	http_save.request(url, headers, HTTPClient.METHOD_POST, body)
+	print("GameState: Uploading win streak to Supabase (", p_name, ": ", streak, ")")

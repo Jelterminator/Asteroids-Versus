@@ -60,15 +60,15 @@ func _ready():
 	p_emit.spread = 20.0
 	p_emit.gravity = Vector2.ZERO
 	p_emit.initial_velocity_min = 80.0
-	p_emit.scale_amount_min = 2.5
-	p_emit.scale_amount_max = 2.5
+	p_emit.scale_amount_min = 2.0
+	p_emit.scale_amount_max = 2.0
 	
 	var g = Gradient.new()
 	g.interpolation_mode = Gradient.GRADIENT_INTERPOLATE_CONSTANT
 	g.add_point(0.0, Color(1, 1, 1, 1.0))    # 1: White (Opaque)
-	g.add_point(0.1, Color(0.7, 1, 1, 0.8))  # 2: Pale Cyan
-	g.add_point(0.25, Color(0, 1, 1, 0.5))   # 3: Cyan
-	g.add_point(0.5, Color(0, 0.6, 1, 0.2))  # 4: Sky Blue
+	g.add_point(0.1, Color(0.7, 1, 1, 1.0))  # 2: Pale Cyan
+	g.add_point(0.25, Color(0, 1, 1, 0.9))   # 3: Cyan
+	g.add_point(0.5, Color(0, 0.6, 1, 0.7))  # 4: Sky Blue
 	g.add_point(0.8, Color(0, 0.2, 1, 0.0))  # 5: Deep Blue (Transparent)
 	p_emit.color_ramp = g
 	
@@ -278,7 +278,14 @@ func spawn_explosion():
 func hit_by_laser(_energy, _shooter = null):
 	if is_exploding: return
 	is_exploding = true
-	GameState.notify_death(p_name)
+	
+	if GameState.current_mode == GameState.GameMode.ONLINE:
+		# Only host handles death authoritative broadcasts in this current setup
+		if multiplayer.is_server():
+			GameState.notify_death.rpc(p_name)
+	else:
+		GameState.notify_death(p_name)
+	
 	spawn_explosion()
 	visible = false
 	
