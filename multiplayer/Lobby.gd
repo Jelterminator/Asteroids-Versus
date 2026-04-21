@@ -3,26 +3,28 @@ extends Control
 var client := preload("res://multiplayer/multiplayer_client.gd").new()
 var joined := false
 
-@onready var status_label = $StatusLabel
-@onready var btn_cancel = $BtnCancel
+@onready var status_label = %StatusLabel
+@onready var btn_cancel = %BtnCancel
+@onready var name_input = %NameInput
+@onready var lb_col_1 = %LBCol1
+@onready var lb_col_2 = %LBCol2
+@onready var btn_join = %BtnJoin
 
 # --- API CONFIG ---
 var signaling_url = "wss://asteroids-versus.onrender.com" # "ws://localhost:8081"
 var supabase_url = "https://gonistzmzzmtzrcdqpud.supabase.co"
 var supabase_key = "sb_publishable_WYhmYscnjsP9zgl6js_wJg_RGkzudbV"
 
-# --- UI NODES (Created in code to keep .tscn simple) ---
-var name_input: LineEdit
-var leaderboard_container: VBoxContainer
-var btn_join: Button
+# --- UI NODES ---
 var http_fetch: HTTPRequest
 var http_save: HTTPRequest
 
 func _ready():
-	_setup_ui()
 	_load_local_name()
+	_prefill_leaderboard()
 	
 	btn_cancel.pressed.connect(_on_cancel_pressed)
+	btn_join.pressed.connect(_on_join_pressed)
 	
 	# Set up HTTP for Supabase
 	http_fetch = HTTPRequest.new()
@@ -44,46 +46,21 @@ func _ready():
 	client.peer_disconnected.connect(_on_peer_disconnected)
 	client.disconnected.connect(_on_disconnected)
 
-func _setup_ui():
-	# Leaderboard Title
-	var lb_title = Label.new()
-	lb_title.text = "TOP 10 PILOT STREAKS"
-	lb_title.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	lb_title.offset_top = 20
-	lb_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	add_child(lb_title)
+func _prefill_leaderboard():
+	for col in [lb_col_1, lb_col_2]:
+		for child in col.get_children():
+			child.queue_free()
 	
-	# Leaderboard Container
-	leaderboard_container = VBoxContainer.new()
-	leaderboard_container.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	leaderboard_container.offset_top = 60
-	leaderboard_container.custom_minimum_size = Vector2(400, 200)
-	add_child(leaderboard_container)
-	
-	# Pre-fill 1-10 safely
 	for i in range(10):
 		var label = Label.new()
 		label.text = "%d. ---" % (i + 1)
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		leaderboard_container.add_child(label)
-
-	# Name Input
-	name_input = LineEdit.new()
-	name_input.placeholder_text = "ENTER YOUR PILOT NAME..."
-	name_input.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_input.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	name_input.offset_top = 50
-	name_input.custom_minimum_size = Vector2(250, 40)
-	add_child(name_input)
-	
-	# Join Button
-	btn_join = Button.new()
-	btn_join.text = "JOIN MATCHMAKING"
-	btn_join.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	btn_join.offset_top = 100
-	btn_join.custom_minimum_size = Vector2(200, 40)
-	btn_join.pressed.connect(_on_join_pressed)
-	add_child(btn_join)
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+		
+		if i < 5:
+			lb_col_1.add_child(label)
+		else:
+			lb_col_2.add_child(label)
 
 func _load_local_name():
 	var config = ConfigFile.new()
@@ -170,20 +147,31 @@ func _on_leaderboard_fetched(_result, response_code, _headers, body):
 	
 	var data = JSON.parse_string(body.get_string_from_utf8())
 	if typeof(data) == TYPE_ARRAY:
-		# Clear existing
-		for child in leaderboard_container.get_children():
-			child.queue_free()
+		for col in [lb_col_1, lb_col_2]:
+			for child in col.get_children():
+				child.queue_free()
 		
 		for i in range(10):
 			var label = Label.new()
+			label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+			
 			if i < data.size():
 				var entry = data[i]
-				label.text = "%d. %s — Streak: %d" % [i + 1, entry["name"], entry["streak"]]
+				label.text = "%d. %-12s STR:%d" % [i + 1, entry["name"].left(12), entry["streak"]]
+				# Stylize top 3
+				match i:
+					0: label.add_theme_color_override("font_color", Color(1, 0.84, 0)) # Gold
+					1: label.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75)) # Silver
+					2: label.add_theme_color_override("font_color", Color(0.8, 0.5, 0.2)) # Bronze
+					_: label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
 			else:
 				label.text = "%d. ---" % (i + 1)
+				label.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
 			
-			label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			leaderboard_container.add_child(label)
+			if i < 5:
+				lb_col_1.add_child(label)
+			else:
+				lb_col_2.add_child(label)
 
 func _save_streak(p_name, streak):
 	var url = supabase_url + "/rest/v1/high_scores"

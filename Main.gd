@@ -101,35 +101,60 @@ func _setup_online():
 		var host_id = 1
 		# The client is not guaranteed to be ID 2 in WebRTC Mesh. They get a huge random int.
 		var client_id = my_id if my_id != 1 else other_id
+		
+		print("Main: my_id=", my_id, " host_id=", host_id, " client_id=", client_id, " peers=", peers)
 
 		# Peer 1 (Host) owns Player 1, Peer X (Client) owns Player 2
 		p1.set_multiplayer_authority(host_id)
 		p2.set_multiplayer_authority(client_id)
 		
-		# Now that player roots have the right authority, force their synchronizers to update!
+		# The Player scripts already created MultiplayerSynchronizers in their _ready(),
+		# but with wrong default authority. Remove them and recreate with correct IDs.
 		var p1_sync = p1.get_node_or_null("MultiplayerSynchronizer")
-		if p1_sync: p1_sync.set_multiplayer_authority(host_id)
+		if p1_sync: p1_sync.queue_free()
 		var p2_sync = p2.get_node_or_null("MultiplayerSynchronizer")
-		if p2_sync: p2_sync.set_multiplayer_authority(client_id)
+		if p2_sync: p2_sync.queue_free()
 		
-		# Set is_local based on actual mesh IDs
+		# Wait a frame for queue_free to process
+		await get_tree().process_frame
+		
+		# Recreate synchronizers with correct authority
+		_create_player_sync(p1, host_id)
+		_create_player_sync(p2, client_id)
+		
+		# Set is_local: each player controls their own ship with WASD+Arrows
 		p1.is_local = (my_id == host_id)
 		p2.is_local = (my_id == client_id)
 		
-		print("Main: Multiplayer authority assigned. Local ID: ", multiplayer.get_unique_id())
+		print("Main: Authority assigned. P1 local=", p1.is_local, " P2 local=", p2.is_local)
 		_show_role_indicator()
 
 	# Set up MultiplayerSpawner to sync dynamic objects (asteroids, lasers)
 	var spawner = MultiplayerSpawner.new()
 	spawner.spawn_path = massives_container.get_path()
-	# Add the scenes that can be spawned
 	spawner.add_spawnable_scene("res://asteroid.tscn")
 	spawner.add_spawnable_scene("res://laser.tscn")
 	add_child(spawner)
 	
-	# Spawn asteroids only AFTER spawner is securely in the tree so clients receive them!
+	# Spawn asteroids only AFTER spawner is in the tree so clients receive them
 	if multiplayer.get_unique_id() == 1:
 		spawn_initial_asteroids()
+
+func _create_player_sync(player_node: Node, authority_id: int):
+	var synchronizer = MultiplayerSynchronizer.new()
+	var config = SceneReplicationConfig.new()
+	config.add_property(^"pos")
+	config.add_property(^"p")
+	config.add_property(^"orientation")
+	config.add_property(^"ai_thrust")
+	config.add_property(^"ai_rot_dir")
+	config.add_property(^"ai_fire")
+	synchronizer.replication_config = config
+	synchronizer.root_path = player_node.get_path()
+	synchronizer.set_multiplayer_authority(authority_id)
+	player_node.set_multiplayer_authority(authority_id)
+	player_node.add_child(synchronizer)
+	print("Main: Created sync for ", player_node.name, " with authority=", authority_id)
 
 func _show_role_indicator():
 	var canvas = CanvasLayer.new()

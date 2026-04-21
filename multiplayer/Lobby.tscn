@@ -1,6 +1,23 @@
-[gd_scene load_steps=2 format=3 uid="uid://dp6v7d8q3q4r8"]
+[gd_scene load_steps=5 format=3 uid="uid://dp6v7d8q3q4r8"]
 
 [ext_resource type="Script" path="res://multiplayer/Lobby.gd" id="1_x8y2j"]
+[ext_resource type="Script" path="res://Starfield.gd" id="2_stars"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass"]
+bg_color = Color(1, 1, 1, 0.05)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+expand_margin_left = 10.0
+expand_margin_top = 10.0
+expand_margin_right = 10.0
+expand_margin_bottom = 10.0
 
 [node name="Lobby" type="Control"]
 layout_mode = 3
@@ -11,33 +28,93 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_x8y2j")
 
-[node name="StatusLabel" type="Label" parent="."]
+[node name="BG" type="ColorRect" parent="."]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -200.0
-offset_top = -11.5
-offset_right = 200.0
-offset_bottom = 11.5
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-text = "CONNECTING TO SIGNALING SERVER..."
+color = Color(0.05, 0.05, 0.05, 1)
+
+[node name="Starfield" type="Node2D" parent="."]
+script = ExtResource("2_stars")
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MainVBox" type="VBoxContainer" parent="CenterContainer"]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+theme_override_constants/separation = 40
+
+[node name="LeaderboardSection" type="VBoxContainer" parent="CenterContainer/MainVBox"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="LBTitle" type="Label" parent="CenterContainer/MainVBox/LeaderboardSection"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "TOP 10 PILOT STREAKS"
 horizontal_alignment = 1
 
-[node name="BtnCancel" type="Button" parent="."]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -50.0
-offset_top = -100.0
-offset_right = 50.0
-offset_bottom = -70.0
-grow_horizontal = 2
-grow_vertical = 0
+[node name="LBPanel" type="PanelContainer" parent="CenterContainer/MainVBox/LeaderboardSection"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
+
+[node name="LBColumns" type="HBoxContainer" parent="CenterContainer/MainVBox/LeaderboardSection/LBPanel"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="LBCol1" type="VBoxContainer" parent="CenterContainer/MainVBox/LeaderboardSection/LBPanel/LBColumns"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 5
+
+[node name="LBCol2" type="VBoxContainer" parent="CenterContainer/MainVBox/LeaderboardSection/LBPanel/LBColumns"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 5
+
+[node name="InteractionSection" type="VBoxContainer" parent="CenterContainer/MainVBox"]
+layout_mode = 2
+theme_override_constants/separation = 25
+
+[node name="NameInput" type="LineEdit" parent="CenterContainer/MainVBox/InteractionSection"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 45)
+layout_mode = 2
+placeholder_text = "ENTER YOUR PILOT NAME..."
+alignment = 1
+max_length = 20
+
+[node name="StatusLabel" type="Label" parent="CenterContainer/MainVBox/InteractionSection"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+text = "READY TO JOIN"
+horizontal_alignment = 1
+
+[node name="ButtonsHBox" type="HBoxContainer" parent="CenterContainer/MainVBox/InteractionSection"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="BtnJoin" type="Button" parent="CenterContainer/MainVBox/InteractionSection/ButtonsHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+text = "JOIN MATCHMAKING"
+
+[node name="BtnCancel" type="Button" parent="CenterContainer/MainVBox/InteractionSection/ButtonsHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 50)
+layout_mode = 2
 text = "CANCEL"

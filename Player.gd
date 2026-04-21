@@ -77,28 +77,8 @@ func _ready():
 	p_emit.position = (Vector2(1, 2) - ship_center) * 4.0
 	add_child(p_emit)
 	
-	if GameState.current_mode == GameState.GameMode.ONLINE:
-		_setup_multiplayer_sync()
-
-func _setup_multiplayer_sync():
-	var synchronizer = MultiplayerSynchronizer.new()
-	var config = SceneReplicationConfig.new()
-	
-	# Properties to sync
-	config.add_property(^"pos")
-	config.add_property(^"p")
-	config.add_property(^"orientation")
-	config.add_property(^"ai_thrust")
-	config.add_property(^"ai_rot_dir")
-	config.add_property(^"ai_fire")
-	
-	synchronizer.replication_config = config
-	synchronizer.root_path = get_path()
-	add_child(synchronizer)
-	
-	# Important: Only the authority sets the properties, others receive them.
-	# We also set the authority of the synchronizer to match the player.
-	synchronizer.set_multiplayer_authority(get_multiplayer_authority())
+	# NOTE: In ONLINE mode, MultiplayerSynchronizers are created by Main._setup_online()
+	# with the correct authority IDs. Do NOT create them here.
 
 func _physics_process(delta):
 	if is_exploding: return
@@ -114,20 +94,27 @@ func _physics_process(delta):
 	var thrusting = false
 	var firing = false
 	
-	
-	
 	if is_local and not has_meta("is_ai"):
-		rot_dir = float(Input.is_physical_key_pressed(KEY_D)) - float(Input.is_physical_key_pressed(KEY_A))
-		thrusting = Input.is_physical_key_pressed(KEY_W)
-		firing = Input.is_physical_key_pressed(KEY_S)
+		if GameState.current_mode == GameState.GameMode.LOCAL:
+			# LOCAL: Player 1 uses WASD only (Player 2 gets Arrows)
+			rot_dir = float(Input.is_physical_key_pressed(KEY_D)) - float(Input.is_physical_key_pressed(KEY_A))
+			thrusting = Input.is_physical_key_pressed(KEY_W)
+			firing = Input.is_physical_key_pressed(KEY_S)
+		else:
+			# AI / ONLINE: Your ship responds to BOTH WASD and Arrows
+			var wasd_rot = float(Input.is_physical_key_pressed(KEY_D)) - float(Input.is_physical_key_pressed(KEY_A))
+			var arrow_rot = float(Input.is_physical_key_pressed(KEY_RIGHT)) - float(Input.is_physical_key_pressed(KEY_LEFT))
+			rot_dir = clamp(wasd_rot + arrow_rot, -1.0, 1.0)
+			thrusting = Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP)
+			firing = Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN)
 		
-		# In online mode, we also update the ai_* variables so they get synced to the remote peer
+		# In online mode, sync inputs to the remote peer
 		if GameState.current_mode == GameState.GameMode.ONLINE:
 			ai_rot_dir = rot_dir
 			ai_thrust = thrusting
 			ai_fire = firing
 	else:
-		# If this is a remote player in online mode, we use the synced values
+		# AI-driven or remote player: use synced values
 		rot_dir = ai_rot_dir
 		thrusting = ai_thrust
 		firing = ai_fire
