@@ -119,6 +119,11 @@ func _physics_process(delta):
 		thrusting = ai_thrust
 		firing = ai_fire
 
+	# --- LOCAL VISUAL TIMERS ---
+	# Update timers locally so the "laser ready" dot works even for remote clients
+	if spawn_timer > 0: spawn_timer -= delta_proper
+	if laser_cooldown > 0: laser_cooldown -= delta_proper
+
 	# If ONLINE and NOT HOST, strictly obey Player 1's Absolute State
 	if GameState.current_mode == GameState.GameMode.ONLINE and multiplayer.get_unique_id() != 1:
 		self.position = pos
@@ -139,8 +144,7 @@ func _physics_process(delta):
 	else:
 		get_node("ThrusterParticles").emitting = false
 	
-	if spawn_timer > 0: spawn_timer -= delta_proper # Internal ship clocks tick slower
-	if laser_cooldown > 0: laser_cooldown -= delta_proper
+	# (Timers moved above)
 	if firing and laser_cooldown <= 0 and spawn_timer <= 0:
 		# In online mode, only the host (ID 1) is allowed to spawn items
 		if GameState.current_mode != GameState.GameMode.ONLINE or multiplayer.get_unique_id() == 1:

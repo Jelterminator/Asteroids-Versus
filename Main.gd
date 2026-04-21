@@ -293,9 +293,12 @@ func _on_restart_pressed():
 	get_tree().paused = false
 	
 	if GameState.current_mode == GameState.GameMode.ONLINE:
-		# Per requirement, return to Lobby for a new match search
-		get_tree().change_scene_to_file("res://multiplayer/Lobby.tscn")
-		return
+		var is_match_over = (GameState.p1_wins >= GameState.WINS_TO_WIN_MATCH or GameState.p2_wins >= GameState.WINS_TO_WIN_MATCH)
+		if is_match_over:
+			# Per requirement, return to Lobby for a new match search
+			get_tree().change_scene_to_file("res://multiplayer/Lobby.tscn")
+			return
+		# If NOT a match over, just reload the scene (connection is NOT severed)
 		
 	# Check for match completion
 	if GameState.p1_wins >= GameState.WINS_TO_WIN_MATCH or GameState.p2_wins >= GameState.WINS_TO_WIN_MATCH:
