@@ -135,6 +135,7 @@ func _setup_online():
 	
 	# 6. Set up MultiplayerSpawner for dynamic objects
 	var spawner = MultiplayerSpawner.new()
+	spawner.name = "GameSpawner"
 	spawner.spawn_path = massives_container.get_path()
 	spawner.add_spawnable_scene("res://asteroid.tscn")
 	spawner.add_spawnable_scene("res://laser.tscn")

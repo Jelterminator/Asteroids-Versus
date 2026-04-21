@@ -24,27 +24,10 @@ func _ready():
 	collision_layer = 2
 	collision_mask = 2 # Merge only with asteroids
 	
-	if GameState.current_mode == GameState.GameMode.ONLINE:
-		_setup_multiplayer_sync()
-	
+
 	generate_shape()
 
-func _setup_multiplayer_sync():
-	var synchronizer = MultiplayerSynchronizer.new()
-	var config = SceneReplicationConfig.new()
-	
-	# Properties to sync from Host to Client
-	config.add_property(^"pos")
-	config.add_property(^"p")
-	config.add_property(^"m")
-	
-	synchronizer.replication_config = config
-	synchronizer.root_path = get_path()
-	add_child(synchronizer)
-	
-	# Asteroids are ALWAYS owned by the host (Peer 1)
-	synchronizer.set_multiplayer_authority(1)
-	set_multiplayer_authority(1)
+
 
 func generate_shape():
 	polygon_points = PackedVector2Array()

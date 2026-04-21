@@ -20,9 +20,7 @@ func _ready():
 	self.scale = Vector2(1.0, 1.0)
 	z_as_relative = false
 	
-	if GameState.current_mode == GameState.GameMode.ONLINE:
-		_setup_multiplayer_sync()
-	
+
 	# Layer 4 (Laser), Mask 2 & 4 (Asteroid & Player)
 	collision_layer = 8 
 	collision_mask = 2 | 4 
@@ -147,18 +145,4 @@ func _draw():
 		draw_line(Vector2(0, -4), Vector2(0, 4), Color.WHITE, 2.0)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
-func _setup_multiplayer_sync():
-	var synchronizer = MultiplayerSynchronizer.new()
-	var config = SceneReplicationConfig.new()
-	
-	config.add_property(^"pos")
-	config.add_property(^"p")
-	
-	synchronizer.replication_config = config
-	synchronizer.root_path = get_path()
-	add_child(synchronizer)
-	
-	# Lasers are short-lived, so we sync their position and direction.
-	# To follow "Host is Boss", Peer 1 owns all lasers.
-	synchronizer.set_multiplayer_authority(1)
-	set_multiplayer_authority(1)
+
