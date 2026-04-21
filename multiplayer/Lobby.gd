@@ -7,7 +7,7 @@ var joined := false
 @onready var btn_cancel = $BtnCancel
 
 # --- API CONFIG ---
-var signaling_url = "ws://localhost:8081" # "wss://asteroids-versus.onrender.com"
+var signaling_url = "wss://asteroids-versus.onrender.com" # "ws://localhost:8081"
 var supabase_url = "https://gonistzmzzmtzrcdqpud.supabase.co"
 var supabase_key = "sb_publishable_WYhmYscnjsP9zgl6js_wJg_RGkzudbV"
 
