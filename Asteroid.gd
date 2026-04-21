@@ -46,6 +46,8 @@ func generate_shape():
 	col.polygon = polygon_points
 	add_child(col)
 
+var _last_m = -1.0
+
 func _physics_process(delta):
 	if is_exploding: return
 	
@@ -53,7 +55,10 @@ func _physics_process(delta):
 	if GameState.current_mode == GameState.GameMode.ONLINE and not is_multiplayer_authority():
 		# On client, we still need to update position from the synced 'pos'
 		self.position = pos
-		# We might also need to regenerate the shape if mass changed
+		if _last_m != m:
+			generate_shape()
+			_last_m = m
+		queue_redraw()
 		return
 
 	if invinciframe > 0: invinciframe -= 1

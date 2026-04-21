@@ -146,19 +146,31 @@ func _setup_online():
 		get_tree().create_timer(0.5).timeout.connect(spawn_initial_asteroids)
 
 func _create_player_sync(player_node: Node, authority_id: int):
-	var synchronizer = MultiplayerSynchronizer.new()
-	var config = SceneReplicationConfig.new()
-	config.add_property(^":pos")
-	config.add_property(^":p")
-	config.add_property(^":orientation")
-	config.add_property(^":ai_thrust")
-	config.add_property(^":ai_rot_dir")
-	config.add_property(^":ai_fire")
-	synchronizer.replication_config = config
-	synchronizer.root_path = player_node.get_path()
-	synchronizer.set_multiplayer_authority(authority_id)
-	player_node.add_child(synchronizer)
-	print("Main: Sync for ", player_node.name, " authority=", authority_id)
+	# 1. Host syncs position and physics state to clients (Host is Absolute Source of Truth)
+	var state_sync = MultiplayerSynchronizer.new()
+	state_sync.name = "StateSync"
+	var state_config = SceneReplicationConfig.new()
+	state_config.add_property(^":pos")
+	state_config.add_property(^":p")
+	state_config.add_property(^":orientation")
+	state_sync.replication_config = state_config
+	state_sync.root_path = player_node.get_path()
+	state_sync.set_multiplayer_authority(1) # Host always owns state
+	player_node.add_child(state_sync)
+	
+	# 2. Client syncs their INPUT to the Host
+	var input_sync = MultiplayerSynchronizer.new()
+	input_sync.name = "InputSync"
+	var input_config = SceneReplicationConfig.new()
+	input_config.add_property(^":ai_thrust")
+	input_config.add_property(^":ai_rot_dir")
+	input_config.add_property(^":ai_fire")
+	input_sync.replication_config = input_config
+	input_sync.root_path = player_node.get_path()
+	input_sync.set_multiplayer_authority(authority_id) # Client owns their inputs
+	player_node.add_child(input_sync)
+	
+	print("Main: Dual Sync for ", player_node.name, " StateAuth=1 InputAuth=", authority_id)
 
 func _show_role_indicator(player_num: int):
 	var canvas = CanvasLayer.new()

@@ -119,9 +119,16 @@ func _physics_process(delta):
 		thrusting = ai_thrust
 		firing = ai_fire
 
-	# Only the authority should calculate physics/movement in a purely synced model,
-	# OR we run the simulation on both and the sync snaps the remote one. 
-	# Here we run on both for smoothness, but sync will correct.
+	# If ONLINE and NOT HOST, strictly obey Player 1's Absolute State
+	if GameState.current_mode == GameState.GameMode.ONLINE and multiplayer.get_unique_id() != 1:
+		self.position = pos
+		orientation = orientation.rotated(v_rot * rot_dir * delta_proper) # Purely visual rotation prediction
+		self.rotation = orientation.angle()
+		get_node("ThrusterParticles").emitting = thrusting
+		queue_redraw()
+		return
+		
+	# --- HOST / LOCAL PHYSICS ---
 
 	orientation = orientation.rotated(v_rot * rot_dir * delta_proper) # Rotation takes longer in the ship's proper time
 	self.rotation = orientation.angle()
