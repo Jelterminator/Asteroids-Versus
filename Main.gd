@@ -13,6 +13,7 @@ extends Node2D
 @onready var hud_menu_btn = $HUD/MenuButton
 
 var asteroid_scene: PackedScene
+var last_is_match_over: bool = false
 
 func _ready():
 	# Configure tiled display
@@ -154,6 +155,8 @@ func _create_player_sync(player_node: Node, authority_id: int):
 	state_config.add_property(^":pos")
 	state_config.add_property(^":p")
 	state_config.add_property(^":orientation")
+	state_config.add_property(^":spawn_timer")
+	state_config.add_property(^":laser_cooldown")
 	state_sync.replication_config = state_config
 	state_sync.root_path = player_node.get_path()
 	state_sync.set_multiplayer_authority(1) # Host always owns state
@@ -267,6 +270,7 @@ func _on_pause_pressed():
 	hud_menu_btn.visible = get_tree().paused
 
 func _on_game_over(winner_name, is_match_over):
+	last_is_match_over = is_match_over
 	if is_match_over:
 		winner_label.text = "MATCH WINNER: " + winner_name
 		btn_restart.text = "NEW MATCH"
@@ -275,7 +279,7 @@ func _on_game_over(winner_name, is_match_over):
 		game_over_ui.visible = true
 		
 		if GameState.current_mode == GameState.GameMode.ONLINE:
-			# Sever the connection now that the match is done
+			# Sever the connection now that THE MATCH is actually done
 			multiplayer.multiplayer_peer = null
 			# Buttons stay visible — player chooses what to do next
 		elif GameState.current_mode == GameState.GameMode.SCREENSAVER:
@@ -289,26 +293,27 @@ func _on_game_over(winner_name, is_match_over):
 		btn_menu.visible = false
 		game_over_ui.visible = true
 		
-		if GameState.current_mode == GameState.GameMode.ONLINE:
-			# Round ended: reload scene for next round
-			await get_tree().create_timer(3.0).timeout
-			if game_over_ui.visible:
-				_on_restart_pressed()
-		else:
-			# LOCAL / AI / SCREENSAVER: auto-restart after 3 seconds
-			await get_tree().create_timer(3.0).timeout
-			if game_over_ui.visible:
-				_on_restart_pressed()
+		# Auto-restart round after 3 seconds for all modes (preserving connection in Online)
+		await get_tree().create_timer(3.0).timeout
+		if game_over_ui.visible:
+			_on_restart_pressed()
 
 func _on_restart_pressed():
 	get_tree().paused = false
 	
 	if GameState.current_mode == GameState.GameMode.ONLINE:
-		# Per requirement, return to Lobby for a new match search
-		get_tree().change_scene_to_file("res://multiplayer/Lobby.tscn")
-		return
+		if last_is_match_over:
+			# Only now do we return to Lobby
+			get_tree().change_scene_to_file("res://multiplayer/Lobby.tscn")
+			return
+		else:
+			# Just starting next round - reload current scene. 
+			# In Godot 4, as long as MultiplayerPeer is set (on Autoload/Tree), 
+			# reload_current_scene() should keep the connection alive but reset scene state.
+			get_tree().reload_current_scene()
+			return
 		
-	# Check for match completion
+	# Check for match completion (Local/AI/Screensaver)
 	if GameState.p1_wins >= GameState.WINS_TO_WIN_MATCH or GameState.p2_wins >= GameState.WINS_TO_WIN_MATCH:
 		if GameState.current_mode == GameState.GameMode.SCREENSAVER:
 			GameState.randomize_screensaver_brains()
