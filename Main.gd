@@ -148,12 +148,12 @@ func _setup_online():
 func _create_player_sync(player_node: Node, authority_id: int):
 	var synchronizer = MultiplayerSynchronizer.new()
 	var config = SceneReplicationConfig.new()
-	config.add_property(^"pos")
-	config.add_property(^"p")
-	config.add_property(^"orientation")
-	config.add_property(^"ai_thrust")
-	config.add_property(^"ai_rot_dir")
-	config.add_property(^"ai_fire")
+	config.add_property(^":pos")
+	config.add_property(^":p")
+	config.add_property(^":orientation")
+	config.add_property(^":ai_thrust")
+	config.add_property(^":ai_rot_dir")
+	config.add_property(^":ai_fire")
 	synchronizer.replication_config = config
 	synchronizer.root_path = player_node.get_path()
 	synchronizer.set_multiplayer_authority(authority_id)
@@ -205,6 +205,7 @@ func spawn_initial_asteroids():
 	for i in range(num_asteroids):
 		var asteroid_mass = (masses[i] / total_random_weight) * total_target_mass
 		spawn_asteroid(asteroid_mass)
+		await get_tree().process_frame # Space out over frames for reliable UDP/WebRTC delivery
 
 
 
