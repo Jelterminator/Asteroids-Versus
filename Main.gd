@@ -40,7 +40,7 @@ func _ready():
 	elif GameState.current_mode == GameState.GameMode.ONLINE:
 		call_deferred("_setup_online")
 
-	if GameState.current_mode != GameState.GameMode.ONLINE or multiplayer.is_server():
+	if GameState.current_mode != GameState.GameMode.ONLINE or multiplayer.get_unique_id() == 1:
 		spawn_initial_asteroids()
 
 func _setup_ai():
@@ -93,15 +93,22 @@ func _setup_online():
 	print("Main: Initializing Online Mode...")
 	var p1 = massives_container.get_node_or_null("Player")
 	var p2 = massives_container.get_node_or_null("Player2")
-	
 	if p1 and p2:
-		# Peer 1 (Host) owns Player 1, Peer 2 (Client) owns Player 2
-		p1.set_multiplayer_authority(1)
-		p2.set_multiplayer_authority(2)
+		var my_id = multiplayer.get_unique_id()
+		var peers = multiplayer.get_peers()
+		var other_id = peers[0] if peers.size() > 0 else 2
 		
-		# Set is_local based on authority
-		p1.is_local = (multiplayer.get_unique_id() == 1)
-		p2.is_local = (multiplayer.get_unique_id() == 2)
+		var host_id = 1
+		# The client is not guaranteed to be ID 2 in WebRTC Mesh. They get a huge random int.
+		var client_id = my_id if my_id != 1 else other_id
+
+		# Peer 1 (Host) owns Player 1, Peer X (Client) owns Player 2
+		p1.set_multiplayer_authority(host_id)
+		p2.set_multiplayer_authority(client_id)
+		
+		# Set is_local based on actual mesh IDs
+		p1.is_local = (my_id == host_id)
+		p2.is_local = (my_id == client_id)
 		
 		print("Main: Multiplayer authority assigned. Local ID: ", multiplayer.get_unique_id())
 		_show_role_indicator()

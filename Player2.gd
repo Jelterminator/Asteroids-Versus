@@ -143,7 +143,7 @@ func _physics_process(delta):
 	if spawn_timer > 0: spawn_timer -= delta_proper
 	if laser_cooldown > 0: laser_cooldown -= delta_proper
 	if firing and laser_cooldown <= 0 and spawn_timer <= 0:
-		if GameState.current_mode != GameState.GameMode.ONLINE or multiplayer.is_server():
+		if GameState.current_mode != GameState.GameMode.ONLINE or multiplayer.get_unique_id() == 1:
 			p -= orientation * p_laser # Recoil
 			var l = laser_scene.instantiate()
 			l.pos = pos + orientation * 20

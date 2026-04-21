@@ -148,8 +148,8 @@ func _physics_process(delta):
 	if spawn_timer > 0: spawn_timer -= delta_proper # Internal ship clocks tick slower
 	if laser_cooldown > 0: laser_cooldown -= delta_proper
 	if firing and laser_cooldown <= 0 and spawn_timer <= 0:
-		# In online mode, only the host (server) is allowed to spawn items
-		if GameState.current_mode != GameState.GameMode.ONLINE or multiplayer.is_server():
+		# In online mode, only the host (ID 1) is allowed to spawn items
+		if GameState.current_mode != GameState.GameMode.ONLINE or multiplayer.get_unique_id() == 1:
 			p -= orientation * p_laser # Recoil
 			var l = laser_scene.instantiate()
 			l.pos = pos + orientation * 20
