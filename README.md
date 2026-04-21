@@ -1,10 +1,10 @@
 # ☄️ Asteroids Versus ☄️
 
-🚀 **[Play it Live Here Data-Free!](https://jelterminator.github.io/Asteroids-Versus)**
+🚀 **[Play it Live Here Data-Free!](https://jelterminator.github.io/Asteroids-Versus)** (Features a "screensaver mode" where two AI play eachother, no keyboard required to get the gist on phone.)
 
-An over-engineered, peer-to-peer multiplayer Asteroids engine written in Godot 4. Instead of basic arcade physics, it simulates actual astrophysics—integrating both **Special Relativity (SR)** and **General Relativity (GR)** to dictate how mass, movement, and time operate in a 2D Toroidal Spacetime topology. 
+An hommage to getting brutally beat by a friend at silly online game, this is a peer-to-peer multiplayer Asteroids engine written in Godot 4. Instead of basic arcade physics, it simulates space-time to create a set of mechanics which is 'lawful chaos' solving the problem that both the game must be fair and the best cannot always win—beyond mass, impulse and energy conservation in collisions, the simulation features effects from both **Special Relativity (SR)** and **General Relativity (GR)** to dictate how mass, movement, and time operate in a 2D Toroidal Spacetime topology. 
 
-If you travel near $`c`$, you squish. If you fall into a gravity well, your internal cooldowns slow down. Period.
+If you travel near $`c`$, you squish. If you fall into a gravity well, your internal cooldowns slow down. Sometimes you predict the geodesic right and hit the opponent behind an asteroid, sometimes you miss and the shot orbits right back onto yourself. This is Asteroids!
 
 <br>
 
@@ -54,7 +54,7 @@ When a laser hits an asteroid, it vaporizes it into fragments. To ensure the $n-
 ## 🌐 Networking
 
 ### Asymmetric Dual-Synchronizer Architecture
-Asteroids Versus implements a high-fidelity, peer-to-peer synchronization model designed specifically for the low-latency demands of relativistic physics. 
+Asteroids Versus implements a proof-of-concept, peer-to-peer synchronization model designed specifically for the stability demands of complex simulation that I am not hosting as a service. Player one hosts and player two is the client who sends player inputs and downloads state updates --- which technically works but is practically only playable for player one. Work could be done to mathematically reduce data per tic and more work could be done in using client side simulations to smoothen gameplay.
 
 - **Host-Authoritative State Replication**: The Host maintains the absolute truth of the gravitational field, asteroid positions, and projectile trajectories. High-frequency state snapshots are serialized and pushed to peers, ensuring perfect synchronization across the torus.
 - **Client Input Replication**: To minimize perceived input lag, Clients replicate only raw input vectors (Thrust/Fire) to the Host. The Host then processes these inputs within its local simulation and reconciles the resulting delta back to the Client.
