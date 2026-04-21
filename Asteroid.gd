@@ -176,6 +176,10 @@ func spawn_explosion():
 	get_tree().create_timer(expl.lifetime).timeout.connect(expl.queue_free)
 	expl.emitting = true
 
+@rpc("authority", "call_remote", "reliable")
+func rpc_spawn_explosion():
+	spawn_explosion()
+
 func hit_by_laser(laser_energy, shooter = null):
 	if is_exploding: return
 	
@@ -188,6 +192,8 @@ func hit_by_laser(laser_energy, shooter = null):
 		return
 		
 	spawn_explosion()
+	if GameState.current_mode == GameState.GameMode.ONLINE:
+		rpc("rpc_spawn_explosion")
 	is_exploding = true
 	
 	var num_pieces = int(randf_range(2, 5))
@@ -229,7 +235,11 @@ func hit_by_laser(laser_energy, shooter = null):
 		a.pos = pos + piece.v.normalized() * PhysicsConfig.ASTEROID_SHATTER_RADIUS
 		a.invinciframe = PhysicsConfig.ASTEROID_INVINCIBILITY_FRAMES 
 		
+		# Explicit Network Name
+		a.name = "AsteroidFr_" + str(Time.get_ticks_usec()) + "_" + str(randi() % 1000)
+		
 		# Add to parent using the captured reference
 		parent_node.call_deferred("add_child", a)
+		await get_tree().process_frame # Space out RPCs to prevent WebRTC large datachannel packet dropping
 	
 	call_deferred("queue_free")
