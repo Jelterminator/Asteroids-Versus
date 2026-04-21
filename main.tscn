@@ -71,12 +71,20 @@ region_rect = Rect2(-512, -512, 1536, 1536)
 process_mode = 3
 
 [node name="P2Score" type="Label" parent="HUD"]
-offset_left = 10.0
-offset_top = 10.0
-offset_right = 110.0
-offset_bottom = 33.0
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -110.0
+offset_top = -33.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 0
+grow_vertical = 0
 theme_override_colors/font_color = Color(1, 0.2, 0, 1)
 text = "P2: 0"
+horizontal_alignment = 2
 
 [node name="PauseButton" type="Button" parent="HUD"]
 anchors_preset = 1
@@ -114,20 +122,12 @@ theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
 text = "asteroids versus"
 
 [node name="P1Score" type="Label" parent="HUD"]
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -110.0
-offset_top = -33.0
-offset_right = -10.0
-offset_bottom = -10.0
-grow_horizontal = 0
-grow_vertical = 0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 110.0
+offset_bottom = 33.0
 theme_override_colors/font_color = Color(0, 0.5, 1, 1)
 text = "P1: 0"
-horizontal_alignment = 2
 
 [node name="GameOverUI" type="CanvasLayer" parent="."]
 layer = 10

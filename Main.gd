@@ -38,7 +38,10 @@ func _ready():
 		call_deferred("_setup_screensaver")
 
 	elif GameState.current_mode == GameState.GameMode.ONLINE:
-		call_deferred("_setup_online")
+		# MUST run synchronously in _ready — NOT call_deferred.
+		# call_deferred lets _physics_process run one frame before setup,
+		# causing both ships to accept input on both peers.
+		_setup_online()
 
 	if GameState.current_mode != GameState.GameMode.ONLINE:
 		spawn_initial_asteroids()
@@ -93,52 +96,53 @@ func _setup_online():
 	print("Main: Initializing Online Mode...")
 	var p1 = massives_container.get_node_or_null("Player")
 	var p2 = massives_container.get_node_or_null("Player2")
-	if p1 and p2:
-		var my_id = multiplayer.get_unique_id()
-		var peers = multiplayer.get_peers()
-		var other_id = peers[0] if peers.size() > 0 else 2
-		
-		var host_id = 1
-		# The client is not guaranteed to be ID 2 in WebRTC Mesh. They get a huge random int.
-		var client_id = my_id if my_id != 1 else other_id
-		
-		print("Main: my_id=", my_id, " host_id=", host_id, " client_id=", client_id, " peers=", peers)
-
-		# Peer 1 (Host) owns Player 1, Peer X (Client) owns Player 2
-		p1.set_multiplayer_authority(host_id)
-		p2.set_multiplayer_authority(client_id)
-		
-		# The Player scripts already created MultiplayerSynchronizers in their _ready(),
-		# but with wrong default authority. Remove them and recreate with correct IDs.
-		var p1_sync = p1.get_node_or_null("MultiplayerSynchronizer")
-		if p1_sync: p1_sync.queue_free()
-		var p2_sync = p2.get_node_or_null("MultiplayerSynchronizer")
-		if p2_sync: p2_sync.queue_free()
-		
-		# Wait a frame for queue_free to process
-		await get_tree().process_frame
-		
-		# Recreate synchronizers with correct authority
-		_create_player_sync(p1, host_id)
-		_create_player_sync(p2, client_id)
-		
-		# Set is_local: each player controls their own ship with WASD+Arrows
-		p1.is_local = (my_id == host_id)
-		p2.is_local = (my_id == client_id)
-		
-		print("Main: Authority assigned. P1 local=", p1.is_local, " P2 local=", p2.is_local)
-		_show_role_indicator()
-
-	# Set up MultiplayerSpawner to sync dynamic objects (asteroids, lasers)
+	if not (p1 and p2):
+		push_error("Main: Player nodes not found!")
+		return
+	
+	var my_id = multiplayer.get_unique_id()
+	var peers = multiplayer.get_peers()
+	var other_id = peers[0] if peers.size() > 0 else 2
+	
+	var host_id = 1
+	var client_id = my_id if my_id != 1 else other_id
+	var i_am_host = (my_id == host_id)
+	
+	print("Main: my_id=", my_id, " host=", host_id, " client=", client_id, " peers=", peers)
+	
+	# 1. Lock down input immediately — disable both until we assign the right one
+	p1.is_local = false
+	p2.is_local = false
+	
+	# 2. Set multiplayer authority
+	p1.set_multiplayer_authority(host_id)
+	p2.set_multiplayer_authority(client_id)
+	
+	# 3. Create synchronizers with correct authority (Player scripts no longer create their own)
+	_create_player_sync(p1, host_id)
+	_create_player_sync(p2, client_id)
+	
+	# 4. Enable input ONLY on the ship this peer owns
+	if i_am_host:
+		p1.is_local = true   # Host controls Player 1
+	else:
+		p2.is_local = true   # Client controls Player 2
+	
+	print("Main: P1.is_local=", p1.is_local, " P2.is_local=", p2.is_local)
+	
+	# 5. Show role indicator
+	_show_role_indicator(1 if i_am_host else 2)
+	
+	# 6. Set up MultiplayerSpawner for dynamic objects
 	var spawner = MultiplayerSpawner.new()
 	spawner.spawn_path = massives_container.get_path()
 	spawner.add_spawnable_scene("res://asteroid.tscn")
 	spawner.add_spawnable_scene("res://laser.tscn")
 	add_child(spawner)
 	
-	# Spawn asteroids only AFTER spawner is in the tree so clients receive them
-	if multiplayer.get_unique_id() == 1:
-		spawn_initial_asteroids()
+	# 7. Host spawns asteroids after a short delay so client's spawner is ready
+	if i_am_host:
+		get_tree().create_timer(0.5).timeout.connect(spawn_initial_asteroids)
 
 func _create_player_sync(player_node: Node, authority_id: int):
 	var synchronizer = MultiplayerSynchronizer.new()
@@ -152,21 +156,19 @@ func _create_player_sync(player_node: Node, authority_id: int):
 	synchronizer.replication_config = config
 	synchronizer.root_path = player_node.get_path()
 	synchronizer.set_multiplayer_authority(authority_id)
-	player_node.set_multiplayer_authority(authority_id)
 	player_node.add_child(synchronizer)
-	print("Main: Created sync for ", player_node.name, " with authority=", authority_id)
+	print("Main: Sync for ", player_node.name, " authority=", authority_id)
 
-func _show_role_indicator():
+func _show_role_indicator(player_num: int):
 	var canvas = CanvasLayer.new()
 	canvas.layer = 100
 	add_child(canvas)
 	
 	var label = Label.new()
-	var my_id = multiplayer.get_unique_id()
-	label.text = "YOU ARE PLAYER " + str(my_id)
+	label.text = "YOU ARE PLAYER " + str(player_num)
 	
-	# Color based on player
-	var p_color = Color(0, 0.5, 1) if my_id == 1 else Color(1, 0.2, 0)
+	# Blue for P1, Red for P2
+	var p_color = Color(0, 0.5, 1) if player_num == 1 else Color(1, 0.2, 0)
 	label.add_theme_color_override("font_color", p_color)
 	label.add_theme_font_size_override("font_size", 48)
 	
@@ -174,9 +176,8 @@ func _show_role_indicator():
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	canvas.add_child(label)
 	
-	# Fade out animation using Tween
+	# Fade out animation
 	var tween = get_tree().create_tween()
-	# Wait 0.4s then fade over 0.6s to reach 1.0s total
 	tween.tween_interval(0.4)
 	tween.tween_property(label, "modulate:a", 0.0, 0.6)
 	tween.finished.connect(canvas.queue_free)
