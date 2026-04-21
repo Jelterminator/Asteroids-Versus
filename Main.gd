@@ -231,6 +231,7 @@ func spawn_asteroid(m_val, forced_pos = null):
 		a.pos = spawn_pos
 		var drift_speed = randf_range(1.0, 5.0)
 		a.p = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized() * drift_speed * m_val
+		a.name = "Asteroid_" + str(Time.get_ticks_usec()) + "_" + str(randi() % 1000)
 		massives_container.add_child(a)
 
 func is_valid_pos(pos, radius):

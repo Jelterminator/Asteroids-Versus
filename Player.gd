@@ -143,7 +143,8 @@ func _physics_process(delta):
 			l.p = orientation
 			l.energy = p_laser * l.C_SPEED
 			l.shooter = self
-			get_node("../..").add_child(l)
+			l.name = "Laser_" + str(Time.get_ticks_usec()) + "_" + str(randi() % 1000)
+			get_parent().add_child(l)
 			laser_cooldown = PhysicsConfig.PLAYER_LASER_COOLDOWN
 
 	# 2. Gravity

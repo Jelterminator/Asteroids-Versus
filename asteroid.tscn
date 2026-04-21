@@ -13,7 +13,7 @@ properties/2/path = NodePath(".:m")
 properties/2/spawn = true
 properties/2/replication_mode = 1
 
-[node name="Asteroid" type="CharacterBody2D" unique_id=246860705]
+[node name="Asteroid" type="CharacterBody2D"]
 script = ExtResource("1_u87q6")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
