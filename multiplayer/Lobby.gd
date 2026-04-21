@@ -1,14 +1,13 @@
 extends Control
 
-var ws := WebSocketPeer.new()
-var rtc_mp := WebRTCMultiplayerPeer.new()
+var client := preload("res://multiplayer/multiplayer_client.gd").new()
 var joined := false
 
 @onready var status_label = $StatusLabel
 @onready var btn_cancel = $BtnCancel
 
 # --- API CONFIG ---
-var signaling_url = "wss://asteroids-versus.onrender.com" 
+var signaling_url = "ws://localhost:8081" # "wss://asteroids-versus.onrender.com"
 var supabase_url = "https://gonistzmzzmtzrcdqpud.supabase.co"
 var supabase_key = "sb_publishable_WYhmYscnjsP9zgl6js_wJg_RGkzudbV"
 
@@ -36,9 +35,14 @@ func _ready():
 	# Initial fetch
 	_fetch_leaderboard()
 	
-	# Set up RTC Peer signals
-	rtc_mp.peer_connected.connect(_on_peer_connected)
-	rtc_mp.peer_disconnected.connect(_on_peer_disconnected)
+	# Set up MultiplayerClient hooks
+	add_child(client)
+	client.connected.connect(_on_connected)
+	client.lobby_joined.connect(_on_lobby_joined)
+	client.lobby_sealed.connect(_on_lobby_sealed)
+	client.peer_connected.connect(_on_peer_connected)
+	client.peer_disconnected.connect(_on_peer_disconnected)
+	client.disconnected.connect(_on_disconnected)
 
 func _setup_ui():
 	# Name Input
@@ -99,91 +103,26 @@ func _on_join_pressed():
 	_connect_to_signaling()
 
 func _connect_to_signaling():
-	var err = ws.connect_to_url(signaling_url)
-	if err != OK:
-		status_label.text = "CANNOT CONNECT TO SIGNALING SERVER"
-	else:
-		status_label.text = "CONNECTING..."
+	status_label.text = "CONNECTING..."
+	# Request implicit 1v1 matchmaking utilizing empty lobby "" and mesh network true
+	client.start(signaling_url, "", true)
 
-func _process(_delta):
-	ws.poll()
-	var state = ws.get_ready_state()
-	
-	if state == WebSocketPeer.STATE_OPEN:
-		if not joined:
-			ws.send_text(JSON.stringify({
-				"type": "join",
-				"name": GameState.player_name
-			}))
-			joined = true
-			status_label.text = "JOINING MATCHMAKING..."
-			
-		while ws.get_available_packet_count() > 0:
-			var packet = ws.get_packet()
-			_handle_signaling_data(JSON.parse_string(packet.get_string_from_utf8()))
-	elif state == WebSocketPeer.STATE_CLOSED and joined:
-		status_label.text = "SIGNALING CONNECTION CLOSED"
+func _on_connected(id: int, use_mesh: bool):
+	pass
 
-func _handle_signaling_data(data):
-	if typeof(data) != TYPE_DICTIONARY: return
-	
-	match data.get("type"):
-		"waiting":
-			status_label.text = "SEARCHING FOR MATCH..."
-		"match_found":
-			status_label.text = "MATCH FOUND! HANDSHAKING..."
-			_start_rtc(data["is_host"])
-		"partner_disconnected":
-			status_label.text = "PARTNER DISCONNECTED"
-			multiplayer.multiplayer_peer = null
-		"candidate":
-			var my_peer_id = multiplayer.get_unique_id()
-			var partner_id = 2 if my_peer_id == 1 else 1
-			if rtc_mp.has_peer(partner_id):
-				rtc_mp.get_peer(partner_id).connection.add_ice_candidate(data["mid"], data["index"], data["sdp"])
-		"offer":
-			var my_peer_id = multiplayer.get_unique_id()
-			var partner_id = 2 if my_peer_id == 1 else 1
-			if rtc_mp.has_peer(partner_id):
-				rtc_mp.get_peer(partner_id).connection.set_remote_description("offer", data["sdp"])
-		"answer":
-			var my_peer_id = multiplayer.get_unique_id()
-			var partner_id = 2 if my_peer_id == 1 else 1
-			if rtc_mp.has_peer(partner_id):
-				rtc_mp.get_peer(partner_id).connection.set_remote_description("answer", data["sdp"])
+func _on_lobby_joined(lobby: String):
+	status_label.text = "SEARCHING FOR MATCH..."
 
-func _start_rtc(is_host: bool):
-	rtc_mp.create_mesh(1 if is_host else 2)
-	multiplayer.multiplayer_peer = rtc_mp
-	
-	var partner_id = 2 if is_host else 1
-	var rtc_peer: WebRTCPeerConnection = rtc_mp.get_peer(partner_id).connection
-	rtc_peer.ice_candidate_created.connect(_on_ice_candidate)
-	rtc_peer.session_description_created.connect(_on_session_description)
-	
-	if is_host:
-		rtc_peer.create_offer()
+func _on_lobby_sealed():
+	pass
 
-func _on_ice_candidate(mid, index, sdp):
-	ws.send_text(JSON.stringify({
-		"type": "candidate",
-		"mid": mid,
-		"index": index,
-		"sdp": sdp
-	}))
-
-func _on_session_description(type, sdp):
-	var my_peer_id = multiplayer.get_unique_id()
-	var partner_id = 2 if my_peer_id == 1 else 1
-	rtc_mp.get_peer(partner_id).connection.set_local_description(type, sdp)
-	
-	ws.send_text(JSON.stringify({
-		"type": type,
-		"sdp": sdp
-	}))
-
-func _on_peer_connected(id):
+func _on_peer_connected(id: int):
 	status_label.text = "PEER CONNECTED! STARTING GAME..."
+	
+	# Host forces a seal immediately to lock matchmaking lobby size at 2
+	if multiplayer.get_unique_id() == 1:
+		client.seal_lobby()
+		
 	# Before starting, if we have a streak, report it (in case we didn't before)
 	if GameState.current_streak > 0:
 		_save_streak(GameState.player_name, GameState.current_streak)
@@ -191,12 +130,21 @@ func _on_peer_connected(id):
 	await get_tree().create_timer(1.0).timeout
 	GameState.start_game(GameState.GameMode.ONLINE)
 
-func _on_peer_disconnected(id):
+func _on_peer_disconnected(id: int):
 	status_label.text = "PEER DISCONNECTED"
 	multiplayer.multiplayer_peer = null
+	btn_join.disabled = false
+	name_input.editable = true
+	client.stop()
+
+func _on_disconnected():
+	status_label.text = "SIGNALING CONNECTION CLOSED"
+	multiplayer.multiplayer_peer = null
+	btn_join.disabled = false
+	name_input.editable = true
 
 func _on_cancel_pressed():
-	ws.close()
+	client.stop()
 	get_tree().change_scene_to_file("res://MainMenu.tscn")
 
 # --- SUPABASE LOGIC ---
@@ -242,4 +190,4 @@ func _save_streak(p_name, streak):
 
 func _notification(what):
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
-		ws.close()
+		client.stop()

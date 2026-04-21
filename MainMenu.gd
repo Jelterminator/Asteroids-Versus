@@ -32,7 +32,7 @@ func _on_btn_local_pressed():
 	GameState.start_game(GameState.GameMode.LOCAL)
 
 func _on_btn_online_pressed():
-	get_tree().change_scene_to_file("res://Lobby.tscn")
+	get_tree().change_scene_to_file("res://multiplayer/Lobby.tscn")
 
 func _on_btn_ai_pressed():
 	main_buttons.visible = false

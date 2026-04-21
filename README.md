@@ -1,52 +1,71 @@
-# Asteroids Duel: Reinforcement Learning Edition
+# ☄️ Asteroids Versus ☄️
 
-An isometric, gravity-fueled Asteroids clone built in Godot 4, featuring an autonomous self-play reinforcement learning pipeline.
+🚀 **[Play it Live Here Data-Free!](https://jelterminator.github.io/Asteroids-Versus)**
 
-## 🚀 Key Features
+An over-engineered, peer-to-peer multiplayer Asteroids engine written in Godot 4. Instead of basic arcade physics, it simulates actual astrophysics—integrating both **Special Relativity (SR)** and **General Relativity (GR)** to dictate how mass, movement, and time operate in a 2D Toroidal Spacetime topology. 
 
-- **Isometric Physics**: A custom 2D isometric world with persistent gravity management.
-- **Decoupled AI Driver Architecture**: AI agents are separated from ship lifecycles, ensuring stable training sessions even as ships are destroyed and respawned.
-- **Self-Play Pipeline**: Integrated with `godot-rl` for high-speed PPO training (Stable Baselines3).
-- **Soft Reset System**: Optimized match loop that resets the environment in a single frame without scene reloads, preserving TCP connections.
-- **Multi-Mode Gameplay**: Support for Local, Online, and AI vs AI Challenge modes.
+If you travel near $`c`$, you squish. If you fall into a gravity well, your internal cooldowns slow down. Period.
 
-## 🛠️ Tech Stack
+<br>
 
-- **Game Engine**: [Godot 4.6+](https://godotengine.org/)
-- **RL Framework**: [Godot RL Agents](https://github.com/edbeeching/godot-rl-agents)
-- **Learning Library**: [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3) / PPO
-- **Environment**: Python 3.12+
+---
 
-## 📥 Installation
+## 🕹️ How to Play
 
-### 1. Godot Setup
-- Clone this repository.
-- Open `project.godot` in Godot 4.6+.
-- Ensure the `godot_rl_agents` plugin is enabled in Project Settings.
+Survive the relativistic sandbox! Dodge asteroids, utilize gravity wells to slingshot your ship, and obliterate the enemy.
 
-### 2. Python Setup
-Create a virtual environment and install dependencies:
-```bash
-python -m venv venv
-source venv/Scripts/activate  # Windows: .\venv\Scripts\activate
-pip install -r requirements.txt
-```
+**Controls:**
+- **[W]** - Thrust Forward
+- **[A] / [D]** - Rotate Left / Right
+- **[S]** - Fire Relativistic Laser
 
-## 🧠 Training the IA
+*Pro-tip: Firing your laser generates massive recoil. Use it to brake or radically alter your momentum in emergencies.*
 
-To start a self-play training session:
+---
 
-1. **Start Python Server**:
-   ```bash
-   python train_ai.py
-   ```
-2. **Launch Godot**: Press **Play** in the Godot Editor.
-3. **Trigger Training**: In the Main Menu, click **AI CHALLENGE**.
+## 🚀 Physics & Simulation Math
 
-The simulation will run at `10x` speed. Checkpoints and ONNX models are saved to the `models/` directory.
+### Special Relativity & Lorentian Mechanics
+Instead of tracking raw velocity, the engine natively tracks relativistic Momentum ($\vec{p}$) and Rest Mass ($m_{0}$). 
+- **The Speed Limit**: The calculation of coordinate velocity factors in the Lorentz factor ($\gamma$), meaning the classic arcade thrust inherently approaches but never surpasses the configurable speed of light ($C$).
+  ```math
+  \gamma = \sqrt{1 + \left( \frac{|p|}{mc} \right)^2} \quad | \quad \vec{v} = \frac{\vec{p} / m}{\gamma}
+  ```
+- **Time Dilation (Proper Time vs Coordinate Time)**: Player actions such as rotation and weapon cooldowns run entirely on Proper Time ($\Delta \tau$), whereas momentum is modified linearly in Coordinate Time.
+- **Lorentz Contraction**: Rendering uses custom Transform matrices rotated in the direction of local momentum to manually compress the polygon vertices by $\frac{1}{\gamma}$. Ships deform dynamically at high speeds.
 
-## 🎮 How to Play
+### General Relativity & Gravity
+A custom `GravityManager.gd` utilizes continuous **Poisson Relaxation** to compute a persistent scalar field solving for the temporal metric tensor component ($g_{tt}$).
+- Mass is bilinearly splatted into a spatial grid every physics frame. Grid relaxation converges on a gravitational potential $\Phi$.
+- Spatial gradients are sampled smoothly (using bilinear interpolation) at object coordinates $x,y$ to pull bodies towards mass distributions.
+- **Gravitational Time Dilation**: Deep gravity wells dynamically stretch the local passage of time by a factor of $\sqrt{-g_{tt}}$. 
+- **Geodesic Mapping**: Realtime visual grids distort using the gravitational well calculations, directly mapping the curvature of the spacetime field onto the background rendering.
 
-- **W/A/S/D**: Player 1 Controls (Thrust, Rotate, Fire)
-- **Arrows**: Player 2 Controls
-- **Objective**: Use gravity and your laser to destroy the opponent while navigating the asteroid field.
+### Toroidal Topological Wrapping
+To simulate classic "edge-wrapping" without stuttering, the spacetime topology operates as a seamless 2D Torus. 
+- Using modulo wrapping (`fposmod`), positions loop mathematically.
+- Visually, objects use **Edge-Triggered Ghosting**: Objects calculate their proximity to boundaries and actively render up to 3 clone representations (offsets of `WORLD_SIZE`) to cross the torus seamlessly.
+
+### Rigorous Momentum Conservation
+When a laser hits an asteroid, it vaporizes it into fragments. To ensure the $n-$body simulation doesn't break, the destruction logic injects internal Kinetic Energy relative to the size of the explosion while shifting the fragmentation velocity vectors perfectly against the Center of Mass. The output maintains exact absolute momentum conservation ($\sum p_{before} = \sum p_{after}$). You can merge asteroids, blast them, or bounce them, and the simulation remains fully intact.
+
+---
+
+## 🌐 Networking
+
+**Peer-to-Peer WebRTC Integration**
+Asteroids Versus uses explicit WebRTC topologies for near-zero latency dueling, rather than trusting archaic polling or locking.
+- A Node.js signaling server intercepts and silently match-makes peers (1v1 Lobbying system), removing the headache from the Host.
+- Features `COOP/COEP` delivery models for SharedArrayBuffers in WebGL.
+
+## 🧠 Godot RL & Embedded Neuro-Inference
+
+What's the point of building a mathematically sound spacetime topology if you aren't training AI to exploit it?
+- **Embedded GDScript Inference**: The codebase includes a bespoke Multi-Layer Perceptron (`NeuralNet.gd`) that calculates forward passes inside the Godot VM without external dependencies. By pre-allocating contiguous memory (`PackedFloat32Array`), matrix-vector multiplication handles continuous framerates effortlessly. 
+- **Toroidal Harmonic Encodings**: Because the world wraps like a torus, the AI isn't fed raw $X,Y$ coordinates. Positions are parsed through global scale $sin$/$cos$ harmonics to prevent discontinuities at the map boundaries.
+- **Gravity Field Discretization**: Standard ray-casts don't work natively in curved spacetime. Instead, the AI Controller observes gravity by calculating an 8x8 Fast-Fourier-style dot product against the $g_{tt}$ potential grid, giving the neural net a localized sense of spacetime curvature.
+- **Seamless Godot-RL Integration**: Native hook mappings for action-spaces and reward callbacks enable remote Python environments (`Ray`, `StableBaselines3`) to train agents completely headless before serializing the brain back into a `.json` for the client.
+
+---
+
+*This is not your dad's arcade game.*

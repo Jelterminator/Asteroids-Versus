@@ -16,6 +16,7 @@ models/checkpoints/**
 # Project specific ignores
 *.tmp
 venv/
+node_modules/
 addons/
 lib/
 logs/
