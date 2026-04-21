@@ -5,7 +5,7 @@
 [ext_resource type="Script" uid="uid://c22t4omm5wesk" path="res://Player.gd" id="2_1bvp3"]
 [ext_resource type="Script" uid="uid://b3bie1m4cx5x7" path="res://Player2.gd" id="3_1bvp3"]
 [ext_resource type="Script" uid="uid://dv6qm17dne6kw" path="res://Starfield.gd" id="6_stars"]
-[ext_resource type="Shader" uid="uid://bwntvun8aow7s" path="res://tiled_fade.gdshader" id="7_shader"]
+[ext_resource type="Shader" uid="uid://bu8nqpg256jnf" path="res://tiled_fade.gdshader" id="7_shader"]
 
 [sub_resource type="ViewportTexture" id="ViewportTexture_v1"]
 viewport_path = NodePath("GameContainer/GameViewport")

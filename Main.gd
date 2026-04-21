@@ -136,10 +136,11 @@ func _setup_online():
 	# 6. Set up MultiplayerSpawner for dynamic objects
 	var spawner = MultiplayerSpawner.new()
 	spawner.name = "GameSpawner"
-	spawner.spawn_path = massives_container.get_path()
+	add_child(spawner) # Add to tree FIRST so get_path() lookups work
+	
+	spawner.spawn_path = spawner.get_path_to(massives_container)
 	spawner.add_spawnable_scene("res://asteroid.tscn")
 	spawner.add_spawnable_scene("res://laser.tscn")
-	add_child(spawner)
 	
 	# 7. Host spawns asteroids after a short delay so client's spawner is ready
 	if i_am_host:
@@ -273,7 +274,11 @@ func _on_game_over(winner_name, is_match_over):
 		btn_menu.visible = true
 		game_over_ui.visible = true
 		
-		if GameState.current_mode == GameState.GameMode.SCREENSAVER:
+		if GameState.current_mode == GameState.GameMode.ONLINE:
+			# Sever the connection now that the match is done
+			multiplayer.multiplayer_peer = null
+			# Buttons stay visible — player chooses what to do next
+		elif GameState.current_mode == GameState.GameMode.SCREENSAVER:
 			# Auto-restart match in screensaver mode after 5 seconds
 			await get_tree().create_timer(5.0).timeout
 			if game_over_ui.visible:
@@ -284,21 +289,24 @@ func _on_game_over(winner_name, is_match_over):
 		btn_menu.visible = false
 		game_over_ui.visible = true
 		
-		# Auto-restart after 3 seconds
-		await get_tree().create_timer(3.0).timeout
-		if game_over_ui.visible: # Ensure we didn't exit to menu
-			_on_restart_pressed()
+		if GameState.current_mode == GameState.GameMode.ONLINE:
+			# Round ended: reload scene for next round
+			await get_tree().create_timer(3.0).timeout
+			if game_over_ui.visible:
+				_on_restart_pressed()
+		else:
+			# LOCAL / AI / SCREENSAVER: auto-restart after 3 seconds
+			await get_tree().create_timer(3.0).timeout
+			if game_over_ui.visible:
+				_on_restart_pressed()
 
 func _on_restart_pressed():
 	get_tree().paused = false
 	
 	if GameState.current_mode == GameState.GameMode.ONLINE:
-		var is_match_over = (GameState.p1_wins >= GameState.WINS_TO_WIN_MATCH or GameState.p2_wins >= GameState.WINS_TO_WIN_MATCH)
-		if is_match_over:
-			# Per requirement, return to Lobby for a new match search
-			get_tree().change_scene_to_file("res://multiplayer/Lobby.tscn")
-			return
-		# If NOT a match over, just reload the scene (connection is NOT severed)
+		# Per requirement, return to Lobby for a new match search
+		get_tree().change_scene_to_file("res://multiplayer/Lobby.tscn")
+		return
 		
 	# Check for match completion
 	if GameState.p1_wins >= GameState.WINS_TO_WIN_MATCH or GameState.p2_wins >= GameState.WINS_TO_WIN_MATCH:

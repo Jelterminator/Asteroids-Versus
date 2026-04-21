@@ -61,7 +61,7 @@ func notify_death(p_killed_name: String):
 		if i_won:
 			current_streak += 1
 			print("GameState: Win streak increased to ", current_streak)
-			_save_streak(player_name, current_streak) # Immediate upload
+			_save_streak(player_name, current_streak) # Upload with local player's name
 		else:
 			current_streak = 0
 			print("GameState: Win streak reset")
@@ -69,10 +69,8 @@ func notify_death(p_killed_name: String):
 		save_persistence()
 		streak_updated.emit(current_streak)
 		
-		# SEVER CONNECTION: Per requirement, online matches disconnect immediately after finishing
-		# We wait a tiny bit to ensure signals have finished processing on all menus
-		call_deferred("_sever_online_connection")
-			
+		# No sever connection here; match end will be handled in Main.gd
+		
 	game_over.emit(winner, is_match_over)
 
 func _sever_online_connection():

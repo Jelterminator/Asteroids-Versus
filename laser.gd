@@ -144,5 +144,3 @@ func _draw():
 		draw_line(Vector2(-4, 0), Vector2(4, 0), Color.WHITE, 2.0)
 		draw_line(Vector2(0, -4), Vector2(0, 4), Color.WHITE, 2.0)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-
