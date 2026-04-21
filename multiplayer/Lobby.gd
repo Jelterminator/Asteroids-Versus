@@ -45,11 +45,33 @@ func _ready():
 	client.disconnected.connect(_on_disconnected)
 
 func _setup_ui():
+	# Leaderboard Title
+	var lb_title = Label.new()
+	lb_title.text = "TOP 10 PILOT STREAKS"
+	lb_title.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	lb_title.offset_top = 20
+	lb_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	add_child(lb_title)
+	
+	# Leaderboard Container
+	leaderboard_container = VBoxContainer.new()
+	leaderboard_container.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	leaderboard_container.offset_top = 60
+	leaderboard_container.custom_minimum_size = Vector2(400, 200)
+	add_child(leaderboard_container)
+	
+	# Pre-fill 1-10 safely
+	for i in range(10):
+		var label = Label.new()
+		label.text = "%d. ---" % (i + 1)
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		leaderboard_container.add_child(label)
+
 	# Name Input
 	name_input = LineEdit.new()
 	name_input.placeholder_text = "ENTER YOUR PILOT NAME..."
 	name_input.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_input.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	name_input.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	name_input.offset_top = 50
 	name_input.custom_minimum_size = Vector2(250, 40)
 	add_child(name_input)
@@ -57,26 +79,11 @@ func _setup_ui():
 	# Join Button
 	btn_join = Button.new()
 	btn_join.text = "JOIN MATCHMAKING"
-	btn_join.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	btn_join.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	btn_join.offset_top = 100
 	btn_join.custom_minimum_size = Vector2(200, 40)
 	btn_join.pressed.connect(_on_join_pressed)
 	add_child(btn_join)
-	
-	# Leaderboard Title
-	var lb_title = Label.new()
-	lb_title.text = "🏆 TOP 10 PILOT STREAKS 🏆"
-	lb_title.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	lb_title.offset_bottom = -250
-	lb_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	add_child(lb_title)
-	
-	# Leaderboard Container
-	leaderboard_container = VBoxContainer.new()
-	leaderboard_container.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	leaderboard_container.offset_bottom = -50
-	leaderboard_container.custom_minimum_size = Vector2(400, 200)
-	add_child(leaderboard_container)
 
 func _load_local_name():
 	var config = ConfigFile.new()
@@ -167,10 +174,14 @@ func _on_leaderboard_fetched(_result, response_code, _headers, body):
 		for child in leaderboard_container.get_children():
 			child.queue_free()
 		
-		for i in range(data.size()):
-			var entry = data[i]
+		for i in range(10):
 			var label = Label.new()
-			label.text = "%d. %s — Streak: %d" % [i + 1, entry["name"], entry["streak"]]
+			if i < data.size():
+				var entry = data[i]
+				label.text = "%d. %s — Streak: %d" % [i + 1, entry["name"], entry["streak"]]
+			else:
+				label.text = "%d. ---" % (i + 1)
+			
 			label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			leaderboard_container.add_child(label)
 

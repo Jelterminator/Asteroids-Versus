@@ -40,7 +40,7 @@ func _ready():
 	elif GameState.current_mode == GameState.GameMode.ONLINE:
 		call_deferred("_setup_online")
 
-	if GameState.current_mode != GameState.GameMode.ONLINE or multiplayer.get_unique_id() == 1:
+	if GameState.current_mode != GameState.GameMode.ONLINE:
 		spawn_initial_asteroids()
 
 func _setup_ai():
@@ -106,6 +106,12 @@ func _setup_online():
 		p1.set_multiplayer_authority(host_id)
 		p2.set_multiplayer_authority(client_id)
 		
+		# Now that player roots have the right authority, force their synchronizers to update!
+		var p1_sync = p1.get_node_or_null("MultiplayerSynchronizer")
+		if p1_sync: p1_sync.set_multiplayer_authority(host_id)
+		var p2_sync = p2.get_node_or_null("MultiplayerSynchronizer")
+		if p2_sync: p2_sync.set_multiplayer_authority(client_id)
+		
 		# Set is_local based on actual mesh IDs
 		p1.is_local = (my_id == host_id)
 		p2.is_local = (my_id == client_id)
@@ -120,6 +126,10 @@ func _setup_online():
 	spawner.add_spawnable_scene("res://asteroid.tscn")
 	spawner.add_spawnable_scene("res://laser.tscn")
 	add_child(spawner)
+	
+	# Spawn asteroids only AFTER spawner is securely in the tree so clients receive them!
+	if multiplayer.get_unique_id() == 1:
+		spawn_initial_asteroids()
 
 func _show_role_indicator():
 	var canvas = CanvasLayer.new()
