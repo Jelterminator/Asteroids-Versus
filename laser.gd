@@ -12,7 +12,7 @@ var trail_pos = []
 var trail_time = []
 var TRAIL_LIFETIME = PhysicsConfig.LASER_TRAIL_LIFETIME
 
-@onready var gravity = get_node("../GravityManager")
+@onready var gravity = get_node("../../GravityManager")
 
 func _ready():
 	add_to_group("lasers")
